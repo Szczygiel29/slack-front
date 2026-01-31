@@ -1,36 +1,92 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Slackmate
 
-## Getting Started
+Slackmate is a stateless Slack assistant for translation, summaries, and reply drafting. It processes Slack payloads on-the-fly and does not store message content in a database.
 
-First, run the development server:
+## Shipped features
+- Translate Slack messages with AWS Amazon Translate.
+- Apply Custom Terminology (glossary) to keep company and product terms consistent.
+- Thread TL;DR summaries.
+- Incremental summary updates from incoming message payloads (no DB storage).
+- Reply suggestions (3 variants) with tone options: FORMAL, CASUAL, SUPPORT, SALES.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## How it works
+Slack message/thread payload → AWS Translate → optional summaries or reply suggestions (LLM) → response posted back to Slack. Processing is stateless and message content is not stored in a database.
+
+## Pricing (USD, per user / month)
+
+| Plan | Price | Best for | Included |
+| --- | --- | --- | --- |
+| Individual | $12 | Personal or small-team usage | Translation, Custom Terminology, thread TL;DR summaries, reply suggestions (3 tones) |
+| Business | $24 | Teams with higher usage needs | Everything in Individual, higher usage limits, Business Q&A (add-on) |
+
+Limits depend on usage and model configuration.
+
+### Business Q&A (add-on)
+Business Q&A helps answer policy, product, and process questions using organization-provided context at request time. It does not require persistent storage of message content.
+
+## API (assist endpoints)
+
+### POST /api/v1/assist/thread-summary
+**Request (example)**
+```json
+{
+  "thread": {
+    "messages": [
+      { "user": "U123", "text": "Can we ship the update today?" },
+      { "user": "U456", "text": "QA signed off this morning." }
+    ]
+  }
+}
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Response (example)**
+```json
+{
+  "summary": "QA signed off and the team is asking to ship today."
+}
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### POST /api/v1/assist/message-summary-update
+**Request (example)**
+```json
+{
+  "summary": "QA signed off and the team is asking to ship today.",
+  "message": { "user": "U789", "text": "Release window is 3pm PT." }
+}
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+**Response (example)**
+```json
+{
+  "summary": "QA signed off, the team wants to ship today, and the release window is 3pm PT."
+}
+```
 
-## Learn More
+### POST /api/v1/assist/reply-suggestions
+**Request (example)**
+```json
+{
+  "message": { "user": "U123", "text": "Can you confirm the rollout plan?" },
+  "tone": "FORMAL"
+}
+```
 
-To learn more about Next.js, take a look at the following resources:
+**Response (example)**
+```json
+{
+  "suggestions": [
+    "Yes — the rollout begins today at 3pm PT and will finish by end of day.",
+    "Confirmed. We start at 3pm PT and will complete the rollout today.",
+    "Confirmed. The rollout is scheduled for 3pm PT today."
+  ]
+}
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Local development
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm install
+npm run dev
+```
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
