@@ -44,12 +44,16 @@ export default function AuthPage() {
   const [mode, setMode] = useState<Mode>(initialMode);
   const [values, setValues] = useState(initialValues);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     setMode(initialMode);
     setErrors({});
-    setNotice("");
+    setNotice(null);
   }, [initialMode]);
 
   const handleChange = (field: keyof typeof initialValues, value: string) => {
@@ -81,21 +85,69 @@ export default function AuthPage() {
     return nextErrors;
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const nextErrors = validate();
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length === 0) {
-      setNotice("Auth is not connected yet. This is a UI stub.");
+      setNotice(null);
+      setIsSubmitting(true);
+      try {
+        const endpoint = mode === "register" ? "/auth/register" : "/auth/login";
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            email: values.email.trim(),
+            password: values.password,
+          }),
+        });
+
+        const data = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          const message =
+            data?.message ??
+            (response.status === 409
+              ? "User already exists."
+              : response.status === 401
+                ? "Invalid credentials."
+                : response.status === 403
+                  ? "Email not verified."
+                  : "Unable to complete request.");
+          setNotice({ type: "error", message });
+          return;
+        }
+
+        if (mode === "register") {
+          setNotice({
+            type: "success",
+            message: data?.message ?? "Activation email sent.",
+          });
+        } else {
+          if (data?.accessToken) {
+            localStorage.setItem("accessToken", data.accessToken);
+          }
+          setNotice({
+            type: "success",
+            message: "Signed in successfully.",
+          });
+        }
+      } finally {
+        setIsSubmitting(false);
+      }
     } else {
-      setNotice("");
+      setNotice(null);
     }
   };
 
   const handleModeChange = (nextMode: Mode) => {
     setMode(nextMode);
     setErrors({});
-    setNotice("");
+    setNotice(null);
   };
 
   return (
@@ -206,13 +258,20 @@ export default function AuthPage() {
             ) : null}
             <button
               type="submit"
+              disabled={isSubmitting}
               className="flex w-full items-center justify-center rounded-full bg-indigo-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300"
             >
-              {modeCopy[mode].submitLabel}
+              {isSubmitting ? "Submitting..." : modeCopy[mode].submitLabel}
             </button>
             {notice ? (
-              <div className="rounded-2xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-100">
-                {notice}
+              <div
+                className={`rounded-2xl border px-4 py-3 text-xs ${
+                  notice.type === "success"
+                    ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-100"
+                    : "border-rose-400/40 bg-rose-500/10 text-rose-100"
+                }`}
+              >
+                {notice.message}
               </div>
             ) : null}
           </form>
