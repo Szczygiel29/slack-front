@@ -10,16 +10,16 @@ const navLinks = [
 ];
 
 const benefits = [
-  "Save hours every week with instant approvals",
-  "Reduce context switching across tools",
-  "Give every team shared visibility in Slack",
+  "Translate Slack messages instantly with AWS Translate",
+  "Keep terminology consistent with Custom Terminology glossaries",
+  "Generate summaries and replies on demand without message storage",
 ];
 
 const featureCards = [
   {
-    title: "Smart approval flows",
+    title: "Slack translation",
     description:
-      "Route requests to the right owners, add conditions, and keep decisions documented.",
+      "Translate messages in-channel with AWS Amazon Translate.",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -38,9 +38,9 @@ const featureCards = [
     ),
   },
   {
-    title: "Workflow automations",
+    title: "Custom Terminology",
     description:
-      "Trigger Slack alerts when systems change, deals update, or projects move forward.",
+      "Apply approved company and product terms for consistent translations.",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -59,9 +59,9 @@ const featureCards = [
     ),
   },
   {
-    title: "Channel-level visibility",
+    title: "Thread TL;DR summaries",
     description:
-      "Share updates to the right Slack channels so everyone stays aligned.",
+      "Get quick summaries of long Slack threads in a single response.",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -80,9 +80,9 @@ const featureCards = [
     ),
   },
   {
-    title: "Admin controls",
+    title: "Incremental summary updates",
     description:
-      "Granular permissions, approval logs, and audit trails in one dashboard.",
+      "Update summaries as new messages arrive using payload-based requests.",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -101,9 +101,9 @@ const featureCards = [
     ),
   },
   {
-    title: "No-code rules",
+    title: "Reply suggestions",
     description:
-      "Build rules in minutes with intuitive toggles and templates.",
+      "Receive three tone-based replies: FORMAL, CASUAL, SUPPORT, SALES.",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -122,9 +122,9 @@ const featureCards = [
     ),
   },
   {
-    title: "Fast setup",
+    title: "Stateless processing",
     description:
-      "Connect Slack, invite teammates, and automate workflows in under 10 minutes.",
+      "Message content is processed on-the-fly and not stored in a database.",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -146,41 +146,28 @@ const featureCards = [
 
 const pricingPlans = [
   {
-    name: "Starter",
+    name: "Individual",
     price: "$12",
-    description: "For small teams launching their first automations.",
+    description: "For individuals or small teams getting started.",
     features: [
-      "Unlimited Slack alerts",
-      "Up to 10 workflows",
-      "Basic approvals",
-      "Email support",
+      "Translation + Custom Terminology",
+      "Thread TL;DR summaries",
+      "Reply suggestions (3 tones)",
+      "Standard usage limits",
     ],
-    cta: "Start free trial",
+    cta: "Get started",
   },
   {
-    name: "Pro",
-    price: "$22",
-    description: "For growing teams that need control and visibility.",
+    name: "Business",
+    price: "$24",
+    description: "For teams with higher usage needs.",
     features: [
-      "Everything in Starter",
-      "Advanced Slack automations",
-      "Admin controls & audit logs",
-      "Priority support",
+      "Everything in Individual",
+      "Higher usage limits",
+      "Business Q&A (add-on)",
     ],
-    cta: "Start free trial",
+    cta: "Talk to sales",
     highlighted: true,
-  },
-  {
-    name: "Enterprise",
-    price: "$35",
-    description: "For large orgs with compliance and custom needs.",
-    features: [
-      "Unlimited workflows",
-      "Custom onboarding",
-      "Security reviews",
-      "Dedicated success manager",
-    ],
-    cta: "Contact sales",
   },
 ];
 
@@ -188,17 +175,17 @@ const faqs = [
   {
     question: "How does pricing work?",
     answer:
-      "Plans are billed per active Slack user. You can switch tiers anytime in the dashboard.",
+      "Plans are billed per user per month. Limits depend on usage and model configuration.",
   },
   {
     question: "What permissions does the app request?",
     answer:
-      "We request only the scopes needed to post alerts, manage workflows, and read approvals.",
+      "We request Slack scopes needed to read message payloads and post translations, summaries, or reply suggestions.",
   },
   {
     question: "Where is data stored?",
     answer:
-      "Workflow data is encrypted at rest and stored in secure cloud infrastructure.",
+      "Message content is processed on-the-fly and not stored in a database.",
   },
   {
     question: "Can I cancel anytime?",
@@ -206,9 +193,14 @@ const faqs = [
       "Yes, you can cancel or downgrade in seconds. Your data remains available during the term.",
   },
   {
-    question: "Do admins control automation rules?",
+    question: "How do summary updates work?",
     answer:
-      "Admins set rules, approve changes, and see audit logs for every workflow.",
+      "Send a new message payload to update an existing summary without storing prior messages.",
+  },
+  {
+    question: "Which reply tones are supported?",
+    answer:
+      "Choose from FORMAL, CASUAL, SUPPORT, or SALES for three suggested replies.",
   },
   {
     question: "How does Slack installation work?",
@@ -319,15 +311,14 @@ export default function Home() {
             <div className="flex-1">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/70">
                 <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                Automate approvals & alerts in Slack in minutes
+                Translate, summarize, and draft replies in Slack
               </div>
               <h1 className="mt-6 text-4xl font-semibold leading-tight text-white md:text-5xl">
-                The Slack automation layer for fast-moving teams
+                The Slack assistant for translation and summaries
               </h1>
               <p className="mt-4 text-base text-white/70 md:text-lg">
-                Slackmate keeps work moving by turning requests into automated, trackable
-                workflows. Route approvals, send instant alerts, and give every team clear
-                visibility without leaving Slack.
+                Slackmate helps teams translate messages, apply consistent terminology,
+                summarize threads, and draft replies without leaving Slack.
               </p>
               <ul className="mt-6 space-y-3 text-sm text-white/80">
                 {benefits.map((benefit) => (
@@ -372,18 +363,18 @@ export default function Home() {
                 </a>
               </div>
               <p className="mt-4 text-xs text-white/60">
-                Connect Slack first, then choose a plan in your dashboard.
+                Connect Slack first, then choose a plan for your users.
               </p>
               <div className="mt-8 inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/70">
-                <span className="font-semibold text-white">Secure by design</span>
-                OAuth 2.0, least-privilege scopes, and verified requests.
+                <span className="font-semibold text-white">Stateless by design</span>
+                Payload-based processing with verified Slack requests.
               </div>
             </div>
             <div className="flex-1">
               <div className="relative mx-auto max-w-lg rounded-3xl border border-white/15 bg-gradient-to-br from-white/10 via-white/5 to-white/0 p-6 shadow-2xl shadow-indigo-500/10">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold uppercase tracking-wide text-white/60">
-                    Live workflow preview
+                    Live assist preview
                   </span>
                   <span className="rounded-full border border-white/20 px-3 py-1 text-xs text-white/70">
                     Slackmate AI
@@ -391,27 +382,28 @@ export default function Home() {
                 </div>
                 <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
                   <div className="flex items-center justify-between text-xs text-white/70">
-                    <span>Marketing approvals</span>
+                    <span>Thread TL;DR</span>
                     <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-emerald-200">
-                      Approved
+                      Ready
                     </span>
                   </div>
                   <div className="mt-4 space-y-3">
-                    {["Brief review", "Budget check", "Legal sign-off"].map((step) => (
+                    {["Translation applied", "Summary generated", "Reply options ready"].map(
+                      (step) => (
                       <div
                         key={step}
                         className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2"
                       >
                         <span className="text-xs text-white/80">{step}</span>
-                        <span className="text-xs text-white/50">2m ago</span>
+                        <span className="text-xs text-white/50">Just now</span>
                       </div>
                     ))}
                   </div>
                 </div>
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
                   {[
-                    { label: "Automations", value: "48 running" },
-                    { label: "Weekly alerts", value: "1,240" },
+                    { label: "Translations", value: "48 today" },
+                    { label: "Summaries", value: "12 today" },
                   ].map((item) => (
                     <div
                       key={item.label}
@@ -425,13 +417,13 @@ export default function Home() {
                   ))}
                 </div>
                 <div className="absolute -right-6 -top-6 hidden rounded-2xl border border-white/10 bg-white/10 p-4 text-xs text-white/70 shadow-lg shadow-indigo-500/20 backdrop-blur sm:block">
-                  Instant Slack alerts, automated workflows, admin controls.
+                  Translations, summaries, and reply suggestions in Slack.
                 </div>
               </div>
               <div className="mt-6 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
                 <p className="text-xs text-white/70">
-                  Glass insight card · 3 teams onboarded this week · 98% approval
-                  completion rate
+                  Glass insight card · 3 teams onboarded this week · 98% response
+                  satisfaction rate
                 </p>
               </div>
             </div>
@@ -457,7 +449,8 @@ export default function Home() {
             </div>
             <div className="flex-1 rounded-3xl border border-white/10 bg-white/5 p-6">
               <p className="text-sm text-white/70">
-                Teams save ~6 hours/week by automating approvals and alerts.
+                Teams keep global conversations moving with fast translations and
+                summaries.
               </p>
               <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
                 <div className="flex items-center gap-1 text-amber-300">
@@ -474,8 +467,7 @@ export default function Home() {
                   ))}
                 </div>
                 <p className="mt-3 text-sm text-white/80">
-                  “We launched automated approvals in a day. Everyone sees status in
-                  Slack now.”
+                  “Translations are instant and the TL;DR keeps every thread aligned.”
                 </p>
                 <p className="mt-3 text-xs text-white/50">
                   Jordan Lee · Ops Lead, Northwind
@@ -491,11 +483,11 @@ export default function Home() {
               Features
             </p>
             <h2 className="mt-3 text-3xl font-semibold text-white">
-              Everything you need to automate work inside Slack
+              Everything you need for translation and summaries in Slack
             </h2>
             <p className="mt-4 text-sm text-white/70">
-              Build workflows once and let Slack deliver the updates, approvals, and
-              visibility your teams crave.
+              Translate messages, summarize threads, and draft replies without leaving
+              Slack.
             </p>
           </div>
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -524,29 +516,29 @@ export default function Home() {
                   How it works
                 </p>
                 <h2 className="mt-3 text-3xl font-semibold text-white">
-                  Set up in minutes, then let Slack do the work
+                  Stateless assistance from payload to response
                 </h2>
                 <p className="mt-4 text-sm text-white/70">
-                  Slackmate connects to your workspace and keeps automation rules running
-                  behind the scenes so teams stay in flow.
+                  Slack payloads flow through translation and optional summaries or reply
+                  suggestions, then return to Slack without storing message content.
                 </p>
               </div>
               <div className="grid gap-4">
                 {[
                   {
-                    title: "Add to Slack",
+                    title: "Slack payload received",
                     description:
-                      "Install in seconds and grant the least-privilege scopes you approve.",
+                      "A message or thread payload arrives from Slack.",
                   },
                   {
-                    title: "Configure rules in the dashboard",
+                    title: "Translate and assist",
                     description:
-                      "Drag-and-drop approvals, triggers, and routing for every workflow.",
+                      "AWS Translate runs first, then summaries or reply suggestions are generated if requested.",
                   },
                   {
-                    title: "Automations run in channels",
+                    title: "Response back to Slack",
                     description:
-                      "Updates post instantly so teams can take action without switching tools.",
+                      "Results return to Slack immediately with no message database storage.",
                   },
                 ].map((step, index) => (
                   <div
@@ -576,69 +568,72 @@ export default function Home() {
                 Pricing
               </p>
               <h2 className="mt-3 text-3xl font-semibold text-white">
-                Plans that scale with every workflow
+                Simple pricing per user per month
               </h2>
               <p className="mt-4 text-sm text-white/70">
-                Simple monthly pricing with an annual discount available. Upgrade as your
-                automation needs grow.
+                Two plans for translation, summaries, and reply suggestions in Slack.
               </p>
             </div>
-            <p className="text-sm text-white/60">Save 20% with annual billing.</p>
+            <p className="text-sm text-white/60">
+              Limits depend on usage and model configuration.
+            </p>
           </div>
-          <div className="mt-10 grid gap-6 lg:grid-cols-3">
-            {pricingPlans.map((plan) => (
-              <div
-                key={plan.name}
-                className={`relative flex h-full flex-col rounded-3xl border p-6 transition hover:-translate-y-1 hover:border-indigo-400/50 ${
-                  plan.highlighted
-                    ? "border-indigo-400/70 bg-gradient-to-br from-indigo-500/20 via-white/5 to-white/0 shadow-2xl shadow-indigo-500/20"
-                    : "border-white/10 bg-white/5"
-                }`}
-              >
-                {plan.highlighted ? (
-                  <span className="absolute -top-3 left-6 rounded-full bg-indigo-400 px-3 py-1 text-xs font-semibold text-slate-900">
-                    Most popular
-                  </span>
-                ) : null}
-                <h3 className="text-lg font-semibold text-white">{plan.name}</h3>
-                <p className="mt-2 text-sm text-white/60">{plan.description}</p>
-                <p className="mt-6 text-3xl font-semibold text-white">
-                  {plan.price}
-                  <span className="text-sm font-normal text-white/60">
-                    /user/mo
-                  </span>
-                </p>
-                <ul className="mt-6 space-y-3 text-sm text-white/70">
-                  {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2">
-                      <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" />
-                      <span>{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-8 space-y-3">
-                  <a
-                    href="#contact"
-                    className={`inline-flex w-full items-center justify-center rounded-full px-4 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300 ${
-                      plan.highlighted
-                        ? "bg-indigo-500 text-white hover:bg-indigo-400"
-                        : "border border-white/20 text-white/80 hover:border-white/40 hover:text-white"
-                    }`}
-                  >
-                    {plan.cta}
-                  </a>
-                  <a
-                    href="#contact"
-                    className="inline-flex w-full items-center justify-center rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white/60 transition hover:border-white/30 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300"
-                  >
-                    Add to Slack
-                  </a>
-                  <p className="text-center text-xs text-white/50">
-                    Cancel anytime.
-                  </p>
-                </div>
-              </div>
-            ))}
+          <div className="mt-10 overflow-hidden rounded-3xl border border-white/10 bg-white/5">
+            <table className="w-full text-left text-sm text-white/70">
+              <thead className="border-b border-white/10 text-xs uppercase tracking-wide text-white/60">
+                <tr>
+                  <th className="px-6 py-4">Plan</th>
+                  <th className="px-6 py-4">Price</th>
+                  <th className="px-6 py-4">Included</th>
+                  <th className="px-6 py-4">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pricingPlans.map((plan) => (
+                  <tr key={plan.name} className="border-b border-white/5 last:border-b-0">
+                    <td className="px-6 py-5 align-top">
+                      <p className="text-base font-semibold text-white">{plan.name}</p>
+                      <p className="mt-1 text-xs text-white/60">{plan.description}</p>
+                    </td>
+                    <td className="px-6 py-5 align-top text-lg font-semibold text-white">
+                      {plan.price}
+                      <span className="text-xs font-normal text-white/60">
+                        /user/mo
+                      </span>
+                    </td>
+                    <td className="px-6 py-5 align-top">
+                      <ul className="space-y-2">
+                        {plan.features.map((feature) => (
+                          <li key={feature} className="flex items-start gap-2">
+                            <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" />
+                            <span>{feature}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </td>
+                    <td className="px-6 py-5 align-top">
+                      <a
+                        href="#contact"
+                        className={`inline-flex items-center justify-center rounded-full px-4 py-2 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300 ${
+                          plan.highlighted
+                            ? "bg-indigo-500 text-white hover:bg-indigo-400"
+                            : "border border-white/20 text-white/80 hover:border-white/40 hover:text-white"
+                        }`}
+                      >
+                        {plan.cta}
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-6">
+            <h3 className="text-lg font-semibold text-white">Business Q&A (add-on)</h3>
+            <p className="mt-2 text-sm text-white/70">
+              Answer policy, product, and process questions using organization-provided
+              context at request time, without storing message content.
+            </p>
           </div>
         </section>
 
@@ -650,11 +645,11 @@ export default function Home() {
                   Security
                 </p>
                 <h2 className="mt-3 text-3xl font-semibold text-white">
-                  Secure by design for modern Slack teams
+                  Secure, stateless processing for Slack teams
                 </h2>
                 <p className="mt-4 text-sm text-white/70">
-                  We build with least privilege, verified requests, and end-to-end
-                  monitoring so your workflows stay protected.
+                  We use least-privilege scopes and verified Slack requests while keeping
+                  message content out of a database.
                 </p>
               </div>
               <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
@@ -662,10 +657,9 @@ export default function Home() {
                   {
                     [
                       "OAuth 2.0 with granular scopes",
-                      "Least-privilege access controls",
-                      "Verified request signatures",
-                      "Encryption at rest and in transit",
-                      "Centralized audit logs",
+                      "Verified Slack request signatures",
+                      "Stateless processing (no message database)",
+                      "Payload-based summaries and replies",
                     ].map((item) => (
                       <li key={item} className="flex items-start gap-3">
                         <span className="mt-1 h-2 w-2 rounded-full bg-indigo-400" />
@@ -675,7 +669,7 @@ export default function Home() {
                   }
                 </ul>
                 <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-xs text-white/60">
-                  Secure by design · SOC2-ready workflows · Admin owned keys
+                  Secure by design · Verified requests · No message storage
                 </div>
               </div>
             </div>
@@ -689,11 +683,11 @@ export default function Home() {
                 Demo preview
               </p>
               <h2 className="mt-3 text-3xl font-semibold text-white">
-                See Slackmate in action before you install
+                See Slackmate assist a real Slack thread
               </h2>
               <p className="mt-4 text-sm text-white/70">
-                Watch a 3-minute walkthrough of approvals, alerts, and admin controls in
-                a real Slack workspace.
+                Preview translations, summaries, and reply suggestions in a real Slack
+                workspace.
               </p>
               <a
                 href="#contact"
@@ -704,16 +698,16 @@ export default function Home() {
             </div>
             <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-white/0 p-8">
               <div className="flex items-center justify-between text-xs text-white/60">
-                <span>Workflow timeline</span>
+                <span>Assist timeline</span>
                 <span>Live sync</span>
               </div>
               <div className="mt-6 space-y-4">
-                {["Finance", "Legal", "Ops"].map((team) => (
+                {["Translate", "Summarize", "Suggest replies"].map((team) => (
                   <div
                     key={team}
                     className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
                   >
-                    <span className="text-sm text-white/80">{team} channel update</span>
+                    <span className="text-sm text-white/80">{team} request</span>
                     <span className="text-xs text-emerald-300">Delivered</span>
                   </div>
                 ))}
@@ -758,11 +752,11 @@ export default function Home() {
             <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <h2 className="text-3xl font-semibold text-white">
-                  Ready to automate approvals in Slack?
+                  Ready to translate and summarize in Slack?
                 </h2>
                 <p className="mt-3 text-sm text-white/70">
-                  Install Slackmate in minutes and start building workflows that keep
-                  teams aligned.
+                  Install Slackmate in minutes and keep every thread aligned with fast
+                  translations and TL;DRs.
                 </p>
               </div>
               <div className="flex flex-wrap gap-4">
@@ -776,7 +770,7 @@ export default function Home() {
                   href="#demo"
                   className="inline-flex items-center justify-center rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white/80 transition hover:border-white/40 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
                 >
-                  Start free trial
+                  View demo
                 </a>
               </div>
             </div>
@@ -803,7 +797,7 @@ export default function Home() {
 
       <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-slate-950/90 px-4 py-3 backdrop-blur md:hidden">
         <div className="mx-auto flex max-w-md items-center justify-between gap-4">
-          <span className="text-xs text-white/70">Ready to automate in Slack?</span>
+          <span className="text-xs text-white/70">Ready to assist in Slack?</span>
           <a
             href="#contact"
             className="inline-flex items-center justify-center rounded-full bg-indigo-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-indigo-500/40 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300"
