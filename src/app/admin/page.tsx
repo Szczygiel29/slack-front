@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
+import { buildBackendUrl } from "@/lib/backend";
+
 type SlackUserVM = {
   id: string;
   email: string;
@@ -88,7 +90,7 @@ export default function AdminPage() {
       setRequiresAuth(false);
       setBillingNotice("");
       try {
-        const userResponse = await fetch("/api/v1/admin/me");
+        const userResponse = await fetch(buildBackendUrl("/api/v1/admin/me"));
 
         if (userResponse.status === 401 || userResponse.status === 403) {
           if (isMounted) {
@@ -103,7 +105,7 @@ export default function AdminPage() {
 
         const userData = (await userResponse.json()) as SlackUserVM;
         const languageResponse = await fetch(
-          "/api/v1/meta/aws-translate-languages"
+          buildBackendUrl("/api/v1/meta/aws-translate-languages")
         );
 
         if (!languageResponse.ok) {
@@ -192,7 +194,7 @@ export default function AdminPage() {
         defaultLanguage,
       };
 
-      const response = await fetch("/api/v1/admin/me", {
+      const response = await fetch(buildBackendUrl("/api/v1/admin/me"), {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
