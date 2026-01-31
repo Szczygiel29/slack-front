@@ -11,7 +11,9 @@ type SlackUserVM = {
   subscriptionStartedAt: string | null;
   nextBillingAt: string | null;
   currentWorkspaceCount: number | null;
-  stripeSubscription: string | null;
+  stripeSubscription: {
+    subscriptionActive: boolean;
+  } | null;
   createdAt: string | null;
 };
 
@@ -75,26 +77,39 @@ export default function AdminPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [requiresAuth, setRequiresAuth] = useState(false);
+  const [billingNotice, setBillingNotice] = useState("");
 
   useEffect(() => {
     let isMounted = true;
     const load = async () => {
       setIsLoading(true);
       setError("");
+      setRequiresAuth(false);
+      setBillingNotice("");
       try {
-        const [userResponse, languageResponse] = await Promise.all([
-          fetch("/api/v1/admin/me"),
-          fetch("/api/v1/meta/aws-translate-languages"),
-        ]);
+        const userResponse = await fetch("/api/v1/admin/me");
+
+        if (userResponse.status === 401 || userResponse.status === 403) {
+          if (isMounted) {
+            setRequiresAuth(true);
+          }
+          return;
+        }
 
         if (!userResponse.ok) {
           throw new Error("Unable to load admin profile.");
         }
+
+        const userData = (await userResponse.json()) as SlackUserVM;
+        const languageResponse = await fetch(
+          "/api/v1/meta/aws-translate-languages"
+        );
+
         if (!languageResponse.ok) {
           throw new Error("Unable to load language options.");
         }
 
-        const userData = (await userResponse.json()) as SlackUserVM;
         const languageData = await languageResponse.json();
 
         if (isMounted) {
@@ -123,6 +138,17 @@ export default function AdminPage() {
     };
   }, []);
 
+  const subscriptionActive = Boolean(
+    user?.stripeSubscription?.subscriptionActive
+  );
+  const hasBillingRoute = false;
+
+  const handleBillingClick = () => {
+    if (!hasBillingRoute) {
+      setBillingNotice("Billing page not configured yet.");
+    }
+  };
+
   useEffect(() => {
     if (!user) {
       return;
@@ -141,10 +167,17 @@ export default function AdminPage() {
       { label: "Subscription started", value: user.subscriptionStartedAt },
       { label: "Next billing", value: user.nextBillingAt },
       { label: "Workspace count", value: user.currentWorkspaceCount },
-      { label: "Stripe subscription", value: user.stripeSubscription },
+      {
+        label: "Stripe subscription",
+        value: user.stripeSubscription
+          ? subscriptionActive
+            ? "Active"
+            : "Inactive"
+          : null,
+      },
       { label: "Created at", value: user.createdAt },
     ];
-  }, [user]);
+  }, [subscriptionActive, user]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -183,6 +216,47 @@ export default function AdminPage() {
     }
   };
 
+  if (requiresAuth) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white">
+        <header className="border-b border-white/10 bg-slate-950/80">
+          <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-500/90 text-sm font-semibold shadow-lg shadow-indigo-500/40">
+                S
+              </div>
+              <span className="text-lg font-semibold tracking-tight">
+                Slackmate
+              </span>
+            </div>
+            <Link
+              href="/"
+              className="text-sm font-medium text-white/70 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
+            >
+              Back to home
+            </Link>
+          </div>
+        </header>
+        <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-16">
+          <section className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center">
+            <h1 className="text-2xl font-semibold text-white">
+              Admin access requires sign in
+            </h1>
+            <p className="mt-3 text-sm text-white/70">
+              Sign in to view your admin profile and settings.
+            </p>
+            <Link
+              href="/auth?mode=login"
+              className="mt-6 inline-flex items-center justify-center rounded-full bg-indigo-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300"
+            >
+              Go to sign in
+            </Link>
+          </section>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <header className="border-b border-white/10 bg-slate-950/80">
@@ -203,6 +277,37 @@ export default function AdminPage() {
       </header>
 
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 py-14">
+        {user ? (
+          <section className="space-y-3">
+            {subscriptionActive ? (
+              <button
+                type="button"
+                disabled
+                className="flex w-full items-center justify-center rounded-3xl bg-emerald-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-80"
+              >
+                Subscription active
+              </button>
+            ) : hasBillingRoute ? (
+              <Link
+                href="/billing"
+                className="flex w-full items-center justify-center rounded-3xl bg-rose-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-rose-500/30 transition hover:bg-rose-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-200"
+              >
+                Purchase subscription
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={handleBillingClick}
+                className="flex w-full items-center justify-center rounded-3xl bg-rose-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-rose-500/30 transition hover:bg-rose-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-200"
+              >
+                Purchase subscription
+              </button>
+            )}
+            {billingNotice ? (
+              <p className="text-sm text-rose-100">{billingNotice}</p>
+            ) : null}
+          </section>
+        ) : null}
         <section className="space-y-4">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/70">
             <span className="h-2 w-2 rounded-full bg-emerald-400" />
