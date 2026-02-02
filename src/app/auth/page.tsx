@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
+import { buildBackendUrl } from "@/lib/backend";
 type Mode = "login" | "register";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -93,7 +94,9 @@ export default function AuthPage() {
       setNotice(null);
       setIsSubmitting(true);
       try {
-        const endpoint = mode === "register" ? "/auth/register" : "/auth/login";
+        const endpoint = buildBackendUrl(
+          mode === "register" ? "/auth/register" : "/auth/login"
+        );
         const response = await fetch(endpoint, {
           method: "POST",
           headers: {
