@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
-import { buildBackendUrl } from "@/lib/backend";
+import { buildBackendUrl } from "../../lib/backend";
 
 type SlackUserVM = {
   id: string;
@@ -90,7 +90,9 @@ export default function AdminPage() {
       setRequiresAuth(false);
       setBillingNotice("");
       try {
-        const userResponse = await fetch(buildBackendUrl("/admin/me"));
+        const userResponse = await fetch(buildBackendUrl("/users/me"), {
+          credentials: "include",
+        });
 
         if (userResponse.status === 401 || userResponse.status === 403) {
           if (isMounted) {

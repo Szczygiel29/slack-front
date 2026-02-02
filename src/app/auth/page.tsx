@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-import { buildBackendUrl } from "@/lib/backend";
+import { buildBackendUrl } from "../../lib/backend";
 type Mode = "login" | "register";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
