@@ -133,6 +133,9 @@ export default function AuthPage() {
         } else {
           if (data?.accessToken) {
             localStorage.setItem("accessToken", data.accessToken);
+            if (data?.tokenType) {
+              localStorage.setItem("tokenType", data.tokenType);
+            }
           }
           setNotice({
             type: "success",
