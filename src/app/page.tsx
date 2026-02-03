@@ -244,12 +244,6 @@ export default function Home() {
             >
               Sign in / Create account
             </Link>
-            <Link
-              href="/admin"
-              className="rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-white/80 transition hover:border-white/40 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
-            >
-              Admin
-            </Link>
             <a
               href="#pricing"
               className="rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-white/80 transition hover:border-white/40 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
@@ -306,13 +300,6 @@ export default function Home() {
               >
                 View plans
               </a>
-              <Link
-                href="/admin"
-                className="rounded-full border border-white/20 px-4 py-2 text-center font-medium text-white/80 transition hover:border-white/40 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Admin
-              </Link>
               <a
                 href="#contact"
                 className="rounded-full bg-indigo-500 px-4 py-2 text-center font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300"
