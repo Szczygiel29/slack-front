@@ -71,17 +71,37 @@ const formatValue = (value: string | number | null) => {
   return String(value);
 };
 
+const formatDateTime = (value: string | null) => {
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+};
+
 export default function AdminPage() {
   const [user, setUser] = useState<SlackUserVM | null>(null);
   const [languages, setLanguages] = useState<LanguageOption[]>([]);
   const [handledEmailsInput, setHandledEmailsInput] = useState("");
   const [defaultLanguage, setDefaultLanguage] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingPassword, setIsSavingPassword] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const [passwordNotice, setPasswordNotice] = useState("");
+  const [passwordError, setPasswordError] = useState("");
   const [requiresAuth, setRequiresAuth] = useState(false);
   const [billingNotice, setBillingNotice] = useState("");
+  const [reauthNotice, setReauthNotice] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -172,8 +192,11 @@ export default function AdminPage() {
     return [
       { label: "User ID", value: user.id },
       { label: "Email", value: user.email },
-      { label: "Subscription started", value: user.subscriptionStartedAt },
-      { label: "Next billing", value: user.nextBillingAt },
+      {
+        label: "Subscription started",
+        value: formatDateTime(user.subscriptionStartedAt),
+      },
+      { label: "Next billing", value: formatDateTime(user.nextBillingAt) },
       { label: "Workspace count", value: user.currentWorkspaceCount },
       {
         label: "Stripe subscription",
@@ -183,7 +206,7 @@ export default function AdminPage() {
             : "Inactive"
           : null,
       },
-      { label: "Created at", value: user.createdAt },
+      { label: "Created at", value: formatDateTime(user.createdAt) },
     ];
   }, [subscriptionActive, user]);
 
@@ -200,7 +223,7 @@ export default function AdminPage() {
         defaultLanguage,
       };
 
-      const response = await fetch(buildBackendUrl("/admin/me"), {
+      const response = await fetch(buildBackendUrl("/users/me"), {
         method: "PUT",
         headers: buildAuthHeaders({
           "Content-Type": "application/json",
@@ -221,6 +244,56 @@ export default function AdminPage() {
       );
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handlePasswordSave = async () => {
+    setIsSavingPassword(true);
+    setPasswordNotice("");
+    setPasswordError("");
+
+    if (!password) {
+      setPasswordError("Enter a new password.");
+      setIsSavingPassword(false);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setPasswordError("Passwords do not match.");
+      setIsSavingPassword(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(buildBackendUrl("/users/me"), {
+        method: "PUT",
+        headers: buildAuthHeaders({
+          "Content-Type": "application/json",
+        }),
+        body: JSON.stringify({ password }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Unable to update password.");
+      }
+
+      setPassword("");
+      setConfirmPassword("");
+      setPasswordNotice("Password updated. Please sign in again.");
+      if (typeof window !== "undefined") {
+        window.localStorage.removeItem("accessToken");
+        window.localStorage.removeItem("tokenType");
+      }
+      setReauthNotice("Password updated. Please sign in again.");
+      setRequiresAuth(true);
+    } catch (saveError) {
+      setPasswordError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Unable to update password."
+      );
+    } finally {
+      setIsSavingPassword(false);
     }
   };
 
@@ -253,6 +326,11 @@ export default function AdminPage() {
             <p className="mt-3 text-sm text-white/70">
               Sign in to view your admin profile and settings.
             </p>
+            {reauthNotice ? (
+              <p className="mt-3 text-sm font-medium text-emerald-200">
+                {reauthNotice}
+              </p>
+            ) : null}
             <Link
               href="/auth?mode=login"
               className="mt-6 inline-flex items-center justify-center rounded-full bg-indigo-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300"
@@ -428,6 +506,63 @@ export default function AdminPage() {
                   {error}
                 </div>
               ) : null}
+              <div className="pt-4">
+                <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
+                  <h3 className="text-sm font-semibold text-white">
+                    Change password
+                  </h3>
+                  <p className="mt-1 text-xs text-white/60">
+                    Enter the new password twice. You will be asked to sign in
+                    again.
+                  </p>
+                  <div className="mt-4 space-y-3">
+                    <div>
+                      <label className="text-xs font-medium text-white/70">
+                        New password
+                      </label>
+                      <input
+                        type="password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-2 text-sm text-white placeholder:text-white/40 focus:border-indigo-400 focus:outline-none"
+                        placeholder="Enter a new password"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-white/70">
+                        Confirm password
+                      </label>
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(event) =>
+                          setConfirmPassword(event.target.value)
+                        }
+                        className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-2 text-sm text-white placeholder:text-white/40 focus:border-indigo-400 focus:outline-none"
+                        placeholder="Re-enter new password"
+                      />
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handlePasswordSave}
+                    disabled={isSavingPassword || isLoading}
+                    className="mt-4 flex w-full items-center justify-center rounded-full bg-slate-100 px-5 py-2 text-sm font-semibold text-slate-900 shadow-lg shadow-white/10 transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isSavingPassword ? "Updating..." : "Change password"}
+                  </button>
+                  {passwordNotice ? (
+                    <div className="mt-3 rounded-2xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-100">
+                      {passwordNotice}
+                    </div>
+                  ) : null}
+                  {passwordError ? (
+                    <div className="mt-3 rounded-2xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-xs text-rose-100">
+                      {passwordError}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
             </div>
           </div>
         </section>
