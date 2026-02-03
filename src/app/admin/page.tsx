@@ -108,7 +108,7 @@ export default function AdminPage() {
 
         const userData = (await userResponse.json()) as SlackUserVM;
         const languageResponse = await fetch(
-          buildBackendUrl("/meta/aws-translate-languages"),
+          buildBackendUrl("/translate/languages"),
           {
             headers: buildAuthHeaders(),
           }
@@ -287,7 +287,18 @@ export default function AdminPage() {
       <main className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 py-14">
         {user ? (
           <section className="space-y-3">
-            {subscriptionActive ? (
+            {!user.stripeSubscription ? (
+              <button
+                type="button"
+                onClick={handleBillingClick}
+                className="flex w-full flex-col items-center justify-center gap-1 rounded-3xl bg-rose-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-rose-500/30 transition hover:bg-rose-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-200"
+              >
+                <span>Start subscription</span>
+                <span className="text-xs font-medium text-rose-50/90">
+                  TODO: płatności
+                </span>
+              </button>
+            ) : subscriptionActive ? (
               <button
                 type="button"
                 disabled
