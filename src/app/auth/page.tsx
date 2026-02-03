@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 import { buildBackendUrl } from "../../lib/backend";
@@ -38,6 +38,7 @@ const initialValues = {
 
 export default function AuthPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const queryMode = searchParams.get("mode");
   const initialMode = useMemo<Mode>(() => {
     return queryMode === "register" ? "register" : "login";
@@ -141,6 +142,7 @@ export default function AuthPage() {
             type: "success",
             message: "Signed in successfully.",
           });
+          router.push("/admin");
         }
       } finally {
         setIsSubmitting(false);
