@@ -375,12 +375,6 @@ export default function Home() {
                 >
                   Sign in / Create account
                 </Link>
-                <a
-                  href="#demo"
-                  className="inline-flex items-center justify-center rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white/80 transition hover:border-white/40 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
-                >
-                  View demo
-                </a>
               </div>
               <p className="mt-4 text-xs text-white/60">
                 Connect Slack first, then choose a plan for your users.
@@ -696,46 +690,6 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="demo" className="mx-auto w-full max-w-6xl px-6 py-20">
-          <div className="grid gap-10 lg:grid-cols-[1fr_1.1fr] lg:items-center">
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-8">
-              <p className="text-xs font-semibold uppercase tracking-wide text-indigo-300">
-                Demo preview
-              </p>
-              <h2 className="mt-3 text-3xl font-semibold text-white">
-                See Slackmate assist a real Slack thread
-              </h2>
-              <p className="mt-4 text-sm text-white/70">
-                Preview translations, summaries, and reply suggestions in a real Slack
-                workspace.
-              </p>
-              <a
-                href="#contact"
-                className="mt-6 inline-flex items-center justify-center rounded-full bg-indigo-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300"
-              >
-                View demo
-              </a>
-            </div>
-            <div className="rounded-3xl border border-white/10 bg-gradient-to-br from-white/10 via-white/5 to-white/0 p-8">
-              <div className="flex items-center justify-between text-xs text-white/60">
-                <span>Assist timeline</span>
-                <span>Live sync</span>
-              </div>
-              <div className="mt-6 space-y-4">
-                {["Translate", "Summarize", "Suggest replies"].map((team) => (
-                  <div
-                    key={team}
-                    className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 px-4 py-3"
-                  >
-                    <span className="text-sm text-white/80">{team} request</span>
-                    <span className="text-xs text-emerald-300">Delivered</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-
         <section id="contact" className="border-t border-white/5 bg-slate-950/80">
           <div className="mx-auto w-full max-w-6xl px-6 py-20">
             <div className="grid gap-10 lg:grid-cols-[1.1fr_1fr]">
@@ -786,12 +740,7 @@ export default function Home() {
                 >
                   Add to Slack
                 </a>
-                <a
-                  href="#demo"
-                  className="inline-flex items-center justify-center rounded-full border border-white/20 px-6 py-3 text-sm font-semibold text-white/80 transition hover:border-white/40 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
-                >
-                  View demo
-                </a>
+                
               </div>
             </div>
           </div>
