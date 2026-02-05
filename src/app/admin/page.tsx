@@ -100,7 +100,6 @@ export default function AdminPage() {
   const [passwordNotice, setPasswordNotice] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [requiresAuth, setRequiresAuth] = useState(false);
-  const [billingNotice, setBillingNotice] = useState("");
   const [reauthNotice, setReauthNotice] = useState("");
 
   useEffect(() => {
@@ -109,7 +108,6 @@ export default function AdminPage() {
       setIsLoading(true);
       setError("");
       setRequiresAuth(false);
-      setBillingNotice("");
       try {
         const userResponse = await fetch(buildBackendUrl("/users/me"), {
           headers: buildAuthHeaders(),
@@ -169,13 +167,6 @@ export default function AdminPage() {
   const subscriptionActive = Boolean(
     user?.stripeSubscription?.subscriptionActive
   );
-  const hasBillingRoute = false;
-
-  const handleBillingClick = () => {
-    if (!hasBillingRoute) {
-      setBillingNotice("Billing page not configured yet.");
-    }
-  };
 
   useEffect(() => {
     if (!user) {
@@ -366,16 +357,15 @@ export default function AdminPage() {
         {user ? (
           <section className="space-y-3">
             {!user.stripeSubscription ? (
-              <button
-                type="button"
-                onClick={handleBillingClick}
+              <Link
+                href="/offers"
                 className="flex w-full flex-col items-center justify-center gap-1 rounded-3xl bg-rose-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-rose-500/30 transition hover:bg-rose-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-200"
               >
                 <span>Start subscription</span>
                 <span className="text-xs font-medium text-rose-50/90">
-                  TODO: płatności
+                  Przejdź do wyboru planu
                 </span>
-              </button>
+              </Link>
             ) : subscriptionActive ? (
               <button
                 type="button"
@@ -384,25 +374,14 @@ export default function AdminPage() {
               >
                 Subscription active
               </button>
-            ) : hasBillingRoute ? (
+            ) : (
               <Link
-                href="/billing"
+                href="/offers"
                 className="flex w-full items-center justify-center rounded-3xl bg-rose-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-rose-500/30 transition hover:bg-rose-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-200"
               >
                 Purchase subscription
               </Link>
-            ) : (
-              <button
-                type="button"
-                onClick={handleBillingClick}
-                className="flex w-full items-center justify-center rounded-3xl bg-rose-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-rose-500/30 transition hover:bg-rose-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-200"
-              >
-                Purchase subscription
-              </button>
             )}
-            {billingNotice ? (
-              <p className="text-sm text-rose-100">{billingNotice}</p>
-            ) : null}
           </section>
         ) : null}
         <section className="space-y-4">
