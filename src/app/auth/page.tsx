@@ -213,12 +213,13 @@ export default function AuthPage() {
         </section>
 
         <section className="w-full max-w-lg rounded-3xl border border-white/10 bg-white/5 p-8">
-          <form className="space-y-5" onSubmit={handleSubmit}>
+          <form className="space-y-5" onSubmit={handleSubmit} autoComplete="off">
             <div>
               <label className="text-sm font-medium text-white">Email</label>
               <input
                 type="email"
                 name="email"
+                autoComplete="off"
                 value={values.email}
                 onChange={(event) => handleChange("email", event.target.value)}
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-indigo-400 focus:outline-none"
@@ -233,6 +234,7 @@ export default function AuthPage() {
               <input
                 type="password"
                 name="password"
+                autoComplete="off"
                 value={values.password}
                 onChange={(event) => handleChange("password", event.target.value)}
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-indigo-400 focus:outline-none"
@@ -250,6 +252,7 @@ export default function AuthPage() {
                 <input
                   type="password"
                   name="confirmPassword"
+                  autoComplete="off"
                   value={values.confirmPassword}
                   onChange={(event) =>
                     handleChange("confirmPassword", event.target.value)
