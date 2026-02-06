@@ -1,3 +1,5 @@
+import { buildAuthHeaders } from "./auth";
+
 const DEFAULT_API_BASE_URL = "http://localhost:8080";
 
 const normalizeBaseUrl = (value: string) => value.replace(/\/+$/, "");
@@ -19,13 +21,15 @@ export async function fetchJSON<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
+  const headers = buildAuthHeaders({
+    "Content-Type": "application/json",
+    ...options.headers,
+  });
+
   const response = await fetch(buildApiUrl(path), {
     credentials: "include",
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
+    headers,
   });
 
   if (!response.ok) {

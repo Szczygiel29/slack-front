@@ -37,6 +37,14 @@ export default function StripeCheckoutForm({
     setErrorMessage(null);
     setResult(null);
 
+    const { error: submitError } = await elements.submit();
+
+    if (submitError) {
+      setErrorMessage(submitError.message ?? "Nie udało się przesłać formularza.");
+      setIsSubmitting(false);
+      return;
+    }
+
     const { error, setupIntent } = await stripe.confirmSetup({
       elements,
       clientSecret,
