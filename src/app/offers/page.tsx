@@ -2,11 +2,18 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Elements } from "@stripe/react-stripe-js";
 
+import CheckoutModal from "../../components/CheckoutModal";
+import StripeCheckoutForm from "../../components/StripeCheckoutForm";
 import { buildAuthHeaders } from "../../lib/auth";
 import { buildBackendUrl } from "../../lib/backend";
-
-type OfferType = "INDIVIDUAL" | "BUSINESS";
+import { fetchJSON } from "../../lib/api";
+import { stripePromise } from "../../lib/stripe";
+import type {
+  OfferType,
+  SetupIntentResponse,
+} from "../../types";
 
 type OfferPlanResponse = {
   type: OfferType;
@@ -31,6 +38,11 @@ export default function OffersPage() {
   const [offers, setOffers] = useState<OfferPlanResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [selectedOffer, setSelectedOffer] = useState<OfferType | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSetupLoading, setIsSetupLoading] = useState(false);
+  const [setupError, setSetupError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -75,6 +87,36 @@ export default function OffersPage() {
     };
   }, []);
 
+  const handleSelectOffer = async (offerType: OfferType) => {
+    setSelectedOffer(offerType);
+    setIsSetupLoading(true);
+    setSetupError(null);
+
+    try {
+      const response = await fetchJSON<SetupIntentResponse>(
+        "/api/v1/stripe/setup-intent",
+        {
+          method: "POST",
+          body: JSON.stringify({ offerType }),
+        },
+      );
+      setClientSecret(response.clientSecret);
+      setIsModalOpen(true);
+    } catch (setupIntentError) {
+      setSetupError(
+        setupIntentError instanceof Error
+          ? setupIntentError.message
+          : "Nie udało się utworzyć SetupIntent.",
+      );
+    } finally {
+      setIsSetupLoading(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <header className="border-b border-white/10 bg-slate-950/80">
@@ -90,6 +132,11 @@ export default function OffersPage() {
       </header>
 
       <main className="mx-auto w-full max-w-6xl px-6 py-12">
+        {setupError ? (
+          <div className="mb-6 rounded-3xl border border-rose-400/40 bg-rose-500/10 p-6 text-sm text-rose-100">
+            {setupError}
+          </div>
+        ) : null}
         {isLoading ? (
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6 text-sm text-white/70">
             Ładowanie ofert...
@@ -129,15 +176,38 @@ export default function OffersPage() {
 
                 <button
                   type="button"
+                  onClick={() => handleSelectOffer(offer.type)}
+                  disabled={isSetupLoading}
                   className="mt-6 w-full rounded-full bg-indigo-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300"
                 >
-                  Wybierz
+                  {isSetupLoading && selectedOffer === offer.type
+                    ? "Ładowanie..."
+                    : "Wybierz"}
                 </button>
               </article>
             ))}
           </section>
         )}
       </main>
+      <CheckoutModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        title="Potwierdź subskrypcję"
+      >
+        {!stripePromise ? (
+          <p className="text-sm text-red-400">
+            Brak klucza Stripe. Ustaw NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.
+          </p>
+        ) : null}
+        {clientSecret && selectedOffer && stripePromise ? (
+          <Elements stripe={stripePromise} options={{ clientSecret }}>
+            <StripeCheckoutForm
+              clientSecret={clientSecret}
+              offerType={selectedOffer}
+            />
+          </Elements>
+        ) : null}
+      </CheckoutModal>
     </div>
   );
 }
