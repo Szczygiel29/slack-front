@@ -370,7 +370,7 @@ export default function AdminPage() {
               >
                 <span>Start subscription</span>
                 <span className="text-xs font-medium text-rose-50/90">
-                  Przejdź do wyboru planu
+                  Go to plan selection
                 </span>
               </Link>
             ) : subscriptionActive ? (
