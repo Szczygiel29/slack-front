@@ -176,19 +176,27 @@ export default function AdminPage() {
     setDefaultLanguage(user.defaultLanguage ?? "");
   }, [user]);
 
-  const details = useMemo(() => {
+  const profileDetails = useMemo(() => {
     if (!user) {
       return [];
     }
     return [
-      { label: "User ID", value: user.id },
       { label: "Email", value: user.email },
+      { label: "Workspace count", value: user.currentWorkspaceCount },
+      { label: "Created at", value: formatDateTime(user.createdAt) },
+    ];
+  }, [subscriptionActive, user]);
+
+  const billingDetails = useMemo(() => {
+    if (!user) {
+      return [];
+    }
+    return [
       {
         label: "Subscription started",
         value: formatDateTime(user.subscriptionStartedAt),
       },
       { label: "Next billing", value: formatDateTime(user.nextBillingAt) },
-      { label: "Workspace count", value: user.currentWorkspaceCount },
       {
         label: "Stripe subscription",
         value: user.stripeSubscription
@@ -197,7 +205,6 @@ export default function AdminPage() {
             : "Inactive"
           : null,
       },
-      { label: "Created at", value: formatDateTime(user.createdAt) },
     ];
   }, [subscriptionActive, user]);
 
@@ -411,21 +418,48 @@ export default function AdminPage() {
                 {error}
               </div>
             ) : (
-              <dl className="mt-6 space-y-4 text-sm">
-                {details.map((item) => (
-                  <div
-                    key={item.label}
-                    className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-slate-950/60 p-4"
-                  >
-                    <dt className="text-xs uppercase tracking-wide text-white/60">
-                      {item.label}
-                    </dt>
-                    <dd className="text-white">
-                      {formatValue(item.value)}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
+              <div className="mt-6 space-y-6 text-sm">
+                <div>
+                  <h3 className="text-sm font-semibold text-white">
+                    Account details
+                  </h3>
+                  <dl className="mt-3 space-y-4">
+                    {profileDetails.map((item) => (
+                      <div
+                        key={item.label}
+                        className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-slate-950/60 p-4"
+                      >
+                        <dt className="text-xs uppercase tracking-wide text-white/60">
+                          {item.label}
+                        </dt>
+                        <dd className="text-white">
+                          {formatValue(item.value)}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-white">
+                    Payment details
+                  </h3>
+                  <dl className="mt-3 space-y-4">
+                    {billingDetails.map((item) => (
+                      <div
+                        key={item.label}
+                        className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-slate-950/60 p-4"
+                      >
+                        <dt className="text-xs uppercase tracking-wide text-white/60">
+                          {item.label}
+                        </dt>
+                        <dd className="text-white">
+                          {formatValue(item.value)}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+              </div>
             )}
           </div>
 
