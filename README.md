@@ -24,63 +24,34 @@ Limits depend on usage and model configuration.
 ### Business Q&A (add-on)
 Business Q&A helps answer policy, product, and process questions using organization-provided context at request time. It does not require persistent storage of message content.
 
-## API (assist endpoints)
+## API (endpointy faktycznie używane przez frontend)
 
-### POST /api/v1/assist/thread-summary
-**Request (example)**
-```json
-{
-  "thread": {
-    "messages": [
-      { "user": "U123", "text": "Can we ship the update today?" },
-      { "user": "U456", "text": "QA signed off this morning." }
-    ]
-  }
-}
-```
+Poniżej jest lista endpointów wywoływanych w kodzie frontendu (`src/app`, `src/components`, `src/lib`).
 
-**Response (example)**
-```json
-{
-  "summary": "QA signed off and the team is asking to ship today."
-}
-```
+### Bazowe URL-e
+- `NEXT_PUBLIC_BACKEND_URL` (domyślnie: `http://localhost:8080/api/v1`) jest używany przez `buildBackendUrl(...)`.
+- `NEXT_PUBLIC_API_BASE_URL` (domyślnie: `http://localhost:8080`) jest używany przez `fetchJSON(...)` / `buildApiUrl(...)`.
 
-### POST /api/v1/assist/message-summary-update
-**Request (example)**
-```json
-{
-  "summary": "QA signed off and the team is asking to ship today.",
-  "message": { "user": "U789", "text": "Release window is 3pm PT." }
-}
-```
+### Endpointy auth
+- `POST /api/v1/auth/register`
+- `POST /api/v1/auth/login`
 
-**Response (example)**
-```json
-{
-  "summary": "QA signed off, the team wants to ship today, and the release window is 3pm PT."
-}
-```
+### Endpointy użytkownika/admina
+- `GET /api/v1/users/me`
+- `PUT /api/v1/users/me` (zapis ustawień admina)
+- `PUT /api/v1/users/me` (zmiana hasła)
+- `GET /api/v1/translate/languages`
 
-### POST /api/v1/assist/reply-suggestions
-**Request (example)**
-```json
-{
-  "message": { "user": "U123", "text": "Can you confirm the rollout plan?" },
-  "tone": "FORMAL"
-}
-```
+### Endpointy ofert i płatności
+- `GET /api/v1/offers`
+- `POST /api/v1/stripe/setup-intent`
+- `POST /api/v1/stripe/subscriptions`
 
-**Response (example)**
-```json
-{
-  "suggestions": [
-    "Yes — the rollout begins today at 3pm PT and will finish by end of day.",
-    "Confirmed. We start at 3pm PT and will complete the rollout today.",
-    "Confirmed. The rollout is scheduled for 3pm PT today."
-  ]
-}
-```
+### Szybka mapa: ekran -> endpointy
+- `/auth` -> `POST /api/v1/auth/register`, `POST /api/v1/auth/login`
+- `/admin` -> `GET /api/v1/users/me`, `PUT /api/v1/users/me`, `GET /api/v1/translate/languages`
+- `/offers` -> `GET /api/v1/offers`, `POST /api/v1/stripe/setup-intent`, `POST /api/v1/stripe/subscriptions`
+- `/pricing` -> `POST /api/v1/stripe/setup-intent`, `POST /api/v1/stripe/subscriptions`
 
 ## Local development
 
