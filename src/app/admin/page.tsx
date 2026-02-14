@@ -101,6 +101,16 @@ export default function AdminPage() {
   const [requiresAuth, setRequiresAuth] = useState(false);
   const [reauthNotice, setReauthNotice] = useState("");
 
+  const slackOauthUrl = useMemo(() => {
+    const code =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const url = new URL(buildBackendUrl("/slack/oauth/redirect"));
+    url.searchParams.set("code", code);
+    return url.toString();
+  }, []);
+
   useEffect(() => {
     let isMounted = true;
     const load = async () => {
@@ -478,11 +488,11 @@ export default function AdminPage() {
                     </span>
                   </div>
                   {canAddToSlack ? (
-                    <button
-                      type="button"
+                    <a
+                      href={slackOauthUrl}
                       className="mt-4 flex w-full items-center justify-center rounded-full bg-indigo-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300">
                       Add to Slack
-                    </button>
+                    </a>
                   ) : (
                     <div className="mt-4 space-y-3">
                       <button
