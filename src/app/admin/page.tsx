@@ -7,12 +7,12 @@ import { buildBackendUrl } from "../../lib/backend";
 import { buildAuthHeaders } from "../../lib/auth";
 
 type SlackUserVM = {
-  id: string;
+  id: number;
   email: string;
-  handledEmails: string[];
   defaultLanguage: string | null;
   subscriptionStartedAt: string | null;
   nextBillingAt: string | null;
+  workspaceUsed: number;
   currentWorkspaceCount: number | null;
   stripeSubscription: {
     subscriptionActive: boolean;
@@ -88,7 +88,6 @@ const formatDateTime = (value: string | null) => {
 export default function AdminPage() {
   const [user, setUser] = useState<SlackUserVM | null>(null);
   const [languages, setLanguages] = useState<LanguageOption[]>([]);
-  const [handledEmailsInput, setHandledEmailsInput] = useState("");
   const [defaultLanguage, setDefaultLanguage] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -172,9 +171,13 @@ export default function AdminPage() {
     if (!user) {
       return;
     }
-    setHandledEmailsInput((user.handledEmails ?? []).join("\n"));
     setDefaultLanguage(user.defaultLanguage ?? "");
   }, [user]);
+
+  const canAddToSlack =
+    (user?.currentWorkspaceCount ?? 0) > 0 &&
+    user !== null &&
+    user.workspaceUsed <= (user.currentWorkspaceCount ?? 0);
 
   const profileDetails = useMemo(() => {
     if (!user) {
@@ -182,10 +185,11 @@ export default function AdminPage() {
     }
     return [
       { label: "Email", value: user.email },
+      { label: "Workspace used", value: user.workspaceUsed },
       { label: "Workspace count", value: user.currentWorkspaceCount },
       { label: "Created at", value: formatDateTime(user.createdAt) },
     ];
-  }, [subscriptionActive, user]);
+  }, [user]);
 
   const billingDetails = useMemo(() => {
     if (!user) {
@@ -214,10 +218,6 @@ export default function AdminPage() {
     setError("");
     try {
       const payload = {
-        handledEmails: handledEmailsInput
-          .split("\n")
-          .map((value) => value.trim())
-          .filter(Boolean),
         defaultLanguage,
       };
 
@@ -467,19 +467,43 @@ export default function AdminPage() {
             <h2 className="text-lg font-semibold text-white">Editable settings</h2>
             <div className="mt-6 space-y-5">
               <div>
-                <label className="text-sm font-medium text-white">
-                  Handled emails
-                </label>
-                <p className="mt-1 text-xs text-white/60">
-                  Enter one email address per line.
-                </p>
-                <textarea
-                  rows={6}
-                  value={handledEmailsInput}
-                  onChange={(event) => setHandledEmailsInput(event.target.value)}
-                  className="mt-3 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-indigo-400 focus:outline-none"
-                  placeholder="ops@company.com"
-                />
+                <label className="text-sm font-medium text-white">Workspace usage</label>
+                <div className="mt-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-white/70">workspaceUsed</span>
+                    <span className="font-semibold text-white">
+                      {formatValue(user?.workspaceUsed ?? null)} /{" "}
+                      {formatValue(user?.currentWorkspaceCount ?? null)}
+                    </span>
+                  </div>
+                  {canAddToSlack ? (
+                    <button
+                      type="button"
+                      className="mt-4 flex w-full items-center justify-center rounded-full bg-indigo-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300"
+                    >
+                      Dodaj do Slack
+                    </button>
+                  ) : (
+                    <div className="mt-4 space-y-3">
+                      <button
+                        type="button"
+                        disabled
+                        className="flex w-full cursor-not-allowed items-center justify-center rounded-full bg-slate-600/70 px-5 py-2 text-sm font-semibold text-slate-300"
+                      >
+                        Dodaj do Slack
+                      </button>
+                      <div className="flex items-center justify-between gap-3 rounded-2xl border border-amber-300/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-100">
+                        <span>Limit currentWorkspaceCount przekroczony.</span>
+                        <Link
+                          href="/offers"
+                          className="rounded-full bg-amber-400 px-3 py-1 font-semibold text-amber-950 transition hover:bg-amber-300"
+                        >
+                          Dodaj workspace
+                        </Link>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="text-sm font-medium text-white">
