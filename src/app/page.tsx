@@ -19,8 +19,7 @@ const benefits = [
 const featureCards = [
   {
     title: "Slack translation",
-    description:
-      "Translate messages in-channel with AWS Amazon Translate.",
+    description: "Translate messages in-channel with AWS Amazon Translate.",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -28,8 +27,7 @@ const featureCards = [
         className="h-6 w-6"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.5"
-      >
+        strokeWidth="1.5">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -49,8 +47,7 @@ const featureCards = [
         className="h-6 w-6"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.5"
-      >
+        strokeWidth="1.5">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -70,8 +67,7 @@ const featureCards = [
         className="h-6 w-6"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.5"
-      >
+        strokeWidth="1.5">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -91,8 +87,7 @@ const featureCards = [
         className="h-6 w-6"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.5"
-      >
+        strokeWidth="1.5">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -112,8 +107,7 @@ const featureCards = [
         className="h-6 w-6"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.5"
-      >
+        strokeWidth="1.5">
         <path
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -133,13 +127,8 @@ const featureCards = [
         className="h-6 w-6"
         fill="none"
         stroke="currentColor"
-        strokeWidth="1.5"
-      >
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          d="M12 6v6l4 2"
-        />
+        strokeWidth="1.5">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6l4 2" />
       </svg>
     ),
   },
@@ -167,7 +156,7 @@ const pricingPlans = [
       "Higher usage limits",
       "Business Q&A (add-on)",
     ],
-    cta: "Talk to sales",
+    cta: "Coming soon",
     highlighted: true,
   },
 ];
@@ -223,15 +212,16 @@ export default function Home() {
             <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-500/90 text-sm font-semibold shadow-lg shadow-indigo-500/40">
               S
             </div>
-            <span className="text-lg font-semibold tracking-tight">Slackmate</span>
+            <span className="text-lg font-semibold tracking-tight">
+              Slackmate
+            </span>
           </div>
           <div className="hidden items-center gap-8 md:flex">
             {navLinks.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
-                className="group relative text-sm font-medium text-slate-200 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
-              >
+                className="group relative text-sm font-medium text-slate-200 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400">
                 {link.label}
                 <span className="absolute -bottom-1 left-0 h-0.5 w-full origin-left scale-x-0 rounded-full bg-indigo-400 transition-transform duration-300 group-hover:scale-x-100" />
               </a>
@@ -240,21 +230,13 @@ export default function Home() {
           <div className="hidden items-center gap-3 md:flex">
             <Link
               href="/auth"
-              className="rounded-full bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300"
-            >
+              className="rounded-full bg-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300">
               Sign in / Create account
             </Link>
             <a
               href="#pricing"
-              className="rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-white/80 transition hover:border-white/40 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
-            >
+              className="rounded-full border border-white/20 px-4 py-2 text-sm font-medium text-white/80 transition hover:border-white/40 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400">
               View plans
-            </a>
-            <a
-              href="#contact"
-              className="rounded-full bg-indigo-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300"
-            >
-              Add to Slack
             </a>
           </div>
           <button
@@ -262,8 +244,7 @@ export default function Home() {
             className="inline-flex items-center justify-center rounded-full border border-white/20 p-2 text-white/80 transition hover:border-white/50 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400 md:hidden"
             aria-expanded={isMenuOpen}
             aria-controls="mobile-menu"
-            onClick={() => setIsMenuOpen((open) => !open)}
-          >
+            onClick={() => setIsMenuOpen((open) => !open)}>
             <span className="sr-only">Toggle navigation</span>
             <svg
               viewBox="0 0 24 24"
@@ -271,12 +252,15 @@ export default function Home() {
               fill="none"
               stroke="currentColor"
               strokeWidth="1.5"
-              aria-hidden="true"
-            >
+              aria-hidden="true">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
+                d={
+                  isMenuOpen
+                    ? "M6 18L18 6M6 6l12 12"
+                    : "M4 6h16M4 12h16M4 18h16"
+                }
               />
             </svg>
           </button>
@@ -289,28 +273,24 @@ export default function Home() {
                   key={link.href}
                   href={link.href}
                   className="text-white/80 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
-                  onClick={() => setIsMenuOpen(false)}
-                >
+                  onClick={() => setIsMenuOpen(false)}>
                   {link.label}
                 </a>
               ))}
               <a
                 href="#pricing"
-                className="rounded-full border border-white/20 px-4 py-2 text-center font-medium text-white/80 transition hover:border-white/40 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
-              >
+                className="rounded-full border border-white/20 px-4 py-2 text-center font-medium text-white/80 transition hover:border-white/40 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400">
                 View plans
-              </a>
-              <a
-                href="#contact"
-                className="rounded-full bg-indigo-500 px-4 py-2 text-center font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300"
-              >
-                Add to Slack
               </a>
               <Link
                 href="/auth"
+                className="rounded-full bg-indigo-500 px-4 py-2 text-center font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300">
+                Add to Slack
+              </Link>
+              <Link
+                href="/auth"
                 className="rounded-full border border-white/20 px-4 py-2 text-center font-semibold text-white/80 transition hover:border-white/40 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
-                onClick={() => setIsMenuOpen(false)}
-              >
+                onClick={() => setIsMenuOpen(false)}>
                 Sign in / Create account
               </Link>
             </div>
@@ -331,8 +311,9 @@ export default function Home() {
                 The Slack assistant for translation and summaries
               </h1>
               <p className="mt-4 text-base text-white/70 md:text-lg">
-                Slackmate helps teams translate messages, apply consistent terminology,
-                summarize threads, and draft replies without leaving Slack.
+                Slackmate helps teams translate messages, apply consistent
+                terminology, summarize threads, and draft replies without
+                leaving Slack.
               </p>
               <ul className="mt-6 space-y-3 text-sm text-white/80">
                 {benefits.map((benefit) => (
@@ -344,8 +325,7 @@ export default function Home() {
                         fill="none"
                         stroke="currentColor"
                         strokeWidth="2"
-                        aria-hidden="true"
-                      >
+                        aria-hidden="true">
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"
@@ -362,17 +342,15 @@ export default function Home() {
                   <span className="absolute -top-3 left-4 rounded-full bg-amber-400 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-900">
                     Popular
                   </span>
-                  <a
-                    href="#contact"
-                    className="inline-flex items-center justify-center rounded-full bg-indigo-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/40 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300"
-                  >
+                  <Link
+                    href="/auth"
+                    className="inline-flex items-center justify-center rounded-full bg-indigo-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/40 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300">
                     Add to Slack
-                  </a>
+                  </Link>
                 </div>
                 <Link
                   href="/auth"
-                  className="inline-flex items-center justify-center rounded-full bg-indigo-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/40 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300"
-                >
+                  className="inline-flex items-center justify-center rounded-full bg-indigo-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/40 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300">
                   Sign in / Create account
                 </Link>
               </div>
@@ -380,7 +358,9 @@ export default function Home() {
                 Connect Slack first, then choose a plan for your users.
               </p>
               <div className="mt-8 inline-flex items-center gap-2 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/70">
-                <span className="font-semibold text-white">Stateless by design</span>
+                <span className="font-semibold text-white">
+                  Stateless by design
+                </span>
                 Payload-based processing with verified Slack requests.
               </div>
             </div>
@@ -402,12 +382,14 @@ export default function Home() {
                     </span>
                   </div>
                   <div className="mt-4 space-y-3">
-                    {["Translation applied", "Summary generated", "Reply options ready"].map(
-                      (step) => (
+                    {[
+                      "Translation applied",
+                      "Summary generated",
+                      "Reply options ready",
+                    ].map((step) => (
                       <div
                         key={step}
-                        className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2"
-                      >
+                        className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2">
                         <span className="text-xs text-white/80">{step}</span>
                         <span className="text-xs text-white/50">Just now</span>
                       </div>
@@ -421,8 +403,7 @@ export default function Home() {
                   ].map((item) => (
                     <div
                       key={item.label}
-                      className="rounded-2xl border border-white/10 bg-white/5 p-4"
-                    >
+                      className="rounded-2xl border border-white/10 bg-white/5 p-4">
                       <p className="text-xs text-white/60">{item.label}</p>
                       <p className="mt-2 text-lg font-semibold text-white">
                         {item.value}
@@ -436,8 +417,8 @@ export default function Home() {
               </div>
               <div className="mt-6 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
                 <p className="text-xs text-white/70">
-                  Glass insight card · 3 teams onboarded this week · 98% response
-                  satisfaction rate
+                  Glass insight card · 3 teams onboarded this week · 98%
+                  response satisfaction rate
                 </p>
               </div>
             </div>
@@ -454,8 +435,7 @@ export default function Home() {
                 {logos.map((logo) => (
                   <div
                     key={logo}
-                    className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-white/70"
-                  >
+                    className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-white/70">
                     {logo}
                   </div>
                 ))}
@@ -463,8 +443,8 @@ export default function Home() {
             </div>
             <div className="flex-1 rounded-3xl border border-white/10 bg-white/5 p-6">
               <p className="text-sm text-white/70">
-                Teams keep global conversations moving with fast translations and
-                summaries.
+                Teams keep global conversations moving with fast translations
+                and summaries.
               </p>
               <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
                 <div className="flex items-center gap-1 text-amber-300">
@@ -474,14 +454,14 @@ export default function Home() {
                       viewBox="0 0 20 20"
                       className="h-4 w-4"
                       fill="currentColor"
-                      aria-hidden="true"
-                    >
+                      aria-hidden="true">
                       <path d="M9.049 2.927a1 1 0 011.902 0l1.286 3.967a1 1 0 00.95.69h4.173a1 1 0 01.592 1.806l-3.377 2.455a1 1 0 00-.364 1.118l1.287 3.967a1 1 0 01-1.538 1.118L10 13.347l-3.377 2.456a1 1 0 01-1.538-1.118l1.287-3.967a1 1 0 00-.364-1.118L2.63 9.39a1 1 0 01.592-1.806h4.173a1 1 0 00.95-.69l1.286-3.967z" />
                     </svg>
                   ))}
                 </div>
                 <p className="mt-3 text-sm text-white/80">
-                  “Translations are instant and the TL;DR keeps every thread aligned.”
+                  “Translations are instant and the TL;DR keeps every thread
+                  aligned.”
                 </p>
                 <p className="mt-3 text-xs text-white/50">
                   Jordan Lee · Ops Lead, Northwind
@@ -500,23 +480,24 @@ export default function Home() {
               Everything you need for translation and summaries in Slack
             </h2>
             <p className="mt-4 text-sm text-white/70">
-              Translate messages, summarize threads, and draft replies without leaving
-              Slack.
+              Translate messages, summarize threads, and draft replies without
+              leaving Slack.
             </p>
           </div>
           <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {featureCards.map((feature) => (
               <div
                 key={feature.title}
-                className="group rounded-3xl border border-white/10 bg-white/5 p-6 transition duration-300 hover:-translate-y-1 hover:border-indigo-400/40 hover:bg-white/10"
-              >
+                className="group rounded-3xl border border-white/10 bg-white/5 p-6 transition duration-300 hover:-translate-y-1 hover:border-indigo-400/40 hover:bg-white/10">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/15 text-indigo-200">
                   {feature.icon}
                 </div>
                 <h3 className="mt-5 text-lg font-semibold text-white">
                   {feature.title}
                 </h3>
-                <p className="mt-3 text-sm text-white/70">{feature.description}</p>
+                <p className="mt-3 text-sm text-white/70">
+                  {feature.description}
+                </p>
               </div>
             ))}
           </div>
@@ -533,8 +514,9 @@ export default function Home() {
                   Stateless assistance from payload to response
                 </h2>
                 <p className="mt-4 text-sm text-white/70">
-                  Slack payloads flow through translation and optional summaries or reply
-                  suggestions, then return to Slack without storing message content.
+                  Slack payloads flow through translation and optional summaries
+                  or reply suggestions, then return to Slack without storing
+                  message content.
                 </p>
               </div>
               <div className="grid gap-4">
@@ -557,8 +539,7 @@ export default function Home() {
                 ].map((step, index) => (
                   <div
                     key={step.title}
-                    className="flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5"
-                  >
+                    className="flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5">
                     <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-500 text-sm font-semibold text-white">
                       {index + 1}
                     </div>
@@ -566,7 +547,9 @@ export default function Home() {
                       <h3 className="text-base font-semibold text-white">
                         {step.title}
                       </h3>
-                      <p className="mt-2 text-sm text-white/70">{step.description}</p>
+                      <p className="mt-2 text-sm text-white/70">
+                        {step.description}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -585,7 +568,8 @@ export default function Home() {
                 Simple pricing per user per month
               </h2>
               <p className="mt-4 text-sm text-white/70">
-                Two plans for translation, summaries, and reply suggestions in Slack.
+                Two plans for translation, summaries, and reply suggestions in
+                Slack.
               </p>
             </div>
             <p className="text-sm text-white/60">
@@ -604,10 +588,16 @@ export default function Home() {
               </thead>
               <tbody>
                 {pricingPlans.map((plan) => (
-                  <tr key={plan.name} className="border-b border-white/5 last:border-b-0">
+                  <tr
+                    key={plan.name}
+                    className="border-b border-white/5 last:border-b-0">
                     <td className="px-6 py-5 align-top">
-                      <p className="text-base font-semibold text-white">{plan.name}</p>
-                      <p className="mt-1 text-xs text-white/60">{plan.description}</p>
+                      <p className="text-base font-semibold text-white">
+                        {plan.name}
+                      </p>
+                      <p className="mt-1 text-xs text-white/60">
+                        {plan.description}
+                      </p>
                     </td>
                     <td className="px-6 py-5 align-top text-lg font-semibold text-white">
                       {plan.price}
@@ -632,8 +622,7 @@ export default function Home() {
                           plan.highlighted
                             ? "bg-indigo-500 text-white hover:bg-indigo-400"
                             : "border border-white/20 text-white/80 hover:border-white/40 hover:text-white"
-                        }`}
-                      >
+                        }`}>
                         {plan.cta}
                       </a>
                     </td>
@@ -643,15 +632,20 @@ export default function Home() {
             </table>
           </div>
           <div className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-6">
-            <h3 className="text-lg font-semibold text-white">Business Q&A (add-on)</h3>
+            <h3 className="text-lg font-semibold text-white">
+              Business Q&A (add-on)
+            </h3>
             <p className="mt-2 text-sm text-white/70">
-              Answer policy, product, and process questions using organization-provided
-              context at request time, without storing message content.
+              Answer policy, product, and process questions using
+              organization-provided context at request time, without storing
+              message content.
             </p>
           </div>
         </section>
 
-        <section id="security" className="border-t border-white/5 bg-slate-950/80">
+        <section
+          id="security"
+          className="border-t border-white/5 bg-slate-950/80">
           <div className="mx-auto w-full max-w-6xl px-6 py-20">
             <div className="grid gap-10 lg:grid-cols-[1.1fr_1fr] lg:items-center">
               <div>
@@ -662,25 +656,23 @@ export default function Home() {
                   Secure, stateless processing for Slack teams
                 </h2>
                 <p className="mt-4 text-sm text-white/70">
-                  We use least-privilege scopes and verified Slack requests while keeping
-                  message content out of a database.
+                  We use least-privilege scopes and verified Slack requests
+                  while keeping message content out of a database.
                 </p>
               </div>
               <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
                 <ul className="space-y-3 text-sm text-white/70">
-                  {
-                    [
-                      "OAuth 2.0 with granular scopes",
-                      "Verified Slack request signatures",
-                      "Stateless processing (no message database)",
-                      "Payload-based summaries and replies",
-                    ].map((item) => (
-                      <li key={item} className="flex items-start gap-3">
-                        <span className="mt-1 h-2 w-2 rounded-full bg-indigo-400" />
-                        <span>{item}</span>
-                      </li>
-                    ))
-                  }
+                  {[
+                    "OAuth 2.0 with granular scopes",
+                    "Verified Slack request signatures",
+                    "Stateless processing (no message database)",
+                    "Payload-based summaries and replies",
+                  ].map((item) => (
+                    <li key={item} className="flex items-start gap-3">
+                      <span className="mt-1 h-2 w-2 rounded-full bg-indigo-400" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
                 </ul>
                 <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-xs text-white/60">
                   Secure by design · Verified requests · No message storage
@@ -690,7 +682,9 @@ export default function Home() {
           </div>
         </section>
 
-        <section id="contact" className="border-t border-white/5 bg-slate-950/80">
+        <section
+          id="contact"
+          className="border-t border-white/5 bg-slate-950/80">
           <div className="mx-auto w-full max-w-6xl px-6 py-20">
             <div className="grid gap-10 lg:grid-cols-[1.1fr_1fr]">
               <div>
@@ -708,8 +702,7 @@ export default function Home() {
                 {faqs.map((faq) => (
                   <details
                     key={faq.question}
-                    className="rounded-2xl border border-white/10 bg-white/5 p-4"
-                  >
+                    className="rounded-2xl border border-white/10 bg-white/5 p-4">
                     <summary className="cursor-pointer text-sm font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400">
                       {faq.question}
                     </summary>
@@ -729,18 +722,16 @@ export default function Home() {
                   Ready to translate and summarize in Slack?
                 </h2>
                 <p className="mt-3 text-sm text-white/70">
-                  Install Slackmate in minutes and keep every thread aligned with fast
-                  translations and TL;DRs.
+                  Install Slackmate in minutes and keep every thread aligned
+                  with fast translations and TL;DRs.
                 </p>
               </div>
               <div className="flex flex-wrap gap-4">
-                <a
-                  href="#contact"
-                  className="inline-flex items-center justify-center rounded-full bg-indigo-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300"
-                >
+                <Link
+                  href="/auth"
+                  className="inline-flex items-center justify-center rounded-full bg-indigo-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300">
                   Add to Slack
-                </a>
-                
+                </Link>
               </div>
             </div>
           </div>
@@ -754,8 +745,7 @@ export default function Home() {
               <a
                 key={`footer-${link.href}`}
                 href={link.href}
-                className="transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
-              >
+                className="transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400">
                 {link.label}
               </a>
             ))}
@@ -766,13 +756,14 @@ export default function Home() {
 
       <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-slate-950/90 px-4 py-3 backdrop-blur md:hidden">
         <div className="mx-auto flex max-w-md items-center justify-between gap-4">
-          <span className="text-xs text-white/70">Ready to assist in Slack?</span>
-          <a
-            href="#contact"
-            className="inline-flex items-center justify-center rounded-full bg-indigo-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-indigo-500/40 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300"
-          >
+          <span className="text-xs text-white/70">
+            Ready to assist in Slack?
+          </span>
+          <Link
+            href="/auth"
+            className="inline-flex items-center justify-center rounded-full bg-indigo-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-indigo-500/40 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300">
             Add to Slack
-          </a>
+          </Link>
         </div>
       </div>
     </div>

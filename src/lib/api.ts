@@ -5,7 +5,7 @@ const DEFAULT_API_BASE_URL = "http://localhost:8080";
 const normalizeBaseUrl = (value: string) => value.replace(/\/+$/, "");
 
 export const getApiBaseUrl = () => {
-  const envUrl = process.env.NEXT_PUBLIC_API_BASE_URL;
+  const envUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
   return normalizeBaseUrl(envUrl ?? DEFAULT_API_BASE_URL);
 };
 
@@ -19,7 +19,7 @@ export const buildApiUrl = (path: string) => {
 
 export async function fetchJSON<T>(
   path: string,
-  options: RequestInit = {},
+  options: RequestInit = {}
 ): Promise<T> {
   const headers = buildAuthHeaders({
     "Content-Type": "application/json",

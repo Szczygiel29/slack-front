@@ -29,10 +29,10 @@ const normalizeLanguages = (data: unknown): LanguageOption[] => {
   const rawItems: unknown[] = Array.isArray(data)
     ? data
     : Array.isArray((data as { languages?: unknown[] })?.languages)
-      ? (data as { languages: unknown[] }).languages
-      : Array.isArray((data as { items?: unknown[] })?.items)
-        ? (data as { items: unknown[] }).items
-        : [];
+    ? (data as { languages: unknown[] }).languages
+    : Array.isArray((data as { items?: unknown[] })?.items)
+    ? (data as { items: unknown[] }).items
+    : [];
 
   return rawItems
     .map((item) => {
@@ -310,8 +310,7 @@ export default function AdminPage() {
             </div>
             <Link
               href="/"
-              className="text-sm font-medium text-white/70 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
-            >
+              className="text-sm font-medium text-white/70 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400">
               Back to home
             </Link>
           </div>
@@ -331,8 +330,7 @@ export default function AdminPage() {
             ) : null}
             <Link
               href="/auth?mode=login"
-              className="mt-6 inline-flex items-center justify-center rounded-full bg-indigo-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300"
-            >
+              className="mt-6 inline-flex items-center justify-center rounded-full bg-indigo-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300">
               Go to sign in
             </Link>
           </section>
@@ -349,12 +347,13 @@ export default function AdminPage() {
             <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-500/90 text-sm font-semibold shadow-lg shadow-indigo-500/40">
               S
             </div>
-            <span className="text-lg font-semibold tracking-tight">Slackmate</span>
+            <span className="text-lg font-semibold tracking-tight">
+              Slackmate
+            </span>
           </div>
           <Link
             href="/"
-            className="text-sm font-medium text-white/70 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
-          >
+            className="text-sm font-medium text-white/70 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400">
             Back to home
           </Link>
         </div>
@@ -366,8 +365,7 @@ export default function AdminPage() {
             {!user.stripeSubscription ? (
               <Link
                 href="/offers"
-                className="flex w-full flex-col items-center justify-center gap-1 rounded-3xl bg-rose-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-rose-500/30 transition hover:bg-rose-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-200"
-              >
+                className="flex w-full flex-col items-center justify-center gap-1 rounded-3xl bg-rose-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-rose-500/30 transition hover:bg-rose-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-200">
                 <span>Start subscription</span>
                 <span className="text-xs font-medium text-rose-50/90">
                   Przejdź do wyboru planu
@@ -377,15 +375,13 @@ export default function AdminPage() {
               <button
                 type="button"
                 disabled
-                className="flex w-full items-center justify-center rounded-3xl bg-emerald-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-80"
-              >
+                className="flex w-full items-center justify-center rounded-3xl bg-emerald-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-emerald-500/30 disabled:cursor-not-allowed disabled:opacity-80">
                 Subscription active
               </button>
             ) : (
               <Link
                 href="/offers"
-                className="flex w-full items-center justify-center rounded-3xl bg-rose-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-rose-500/30 transition hover:bg-rose-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-200"
-              >
+                className="flex w-full items-center justify-center rounded-3xl bg-rose-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-rose-500/30 transition hover:bg-rose-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-200">
                 Purchase subscription
               </Link>
             )}
@@ -405,9 +401,12 @@ export default function AdminPage() {
 
         <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-            <h2 className="text-lg font-semibold text-white">Profile overview</h2>
+            <h2 className="text-lg font-semibold text-white">
+              Profile overview
+            </h2>
             <p className="mt-2 text-sm text-white/60">
-              All fields are read-only except handled emails and default language.
+              All fields are read-only except handled emails and default
+              language.
             </p>
             {isLoading ? (
               <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-sm text-white/60">
@@ -427,8 +426,7 @@ export default function AdminPage() {
                     {profileDetails.map((item) => (
                       <div
                         key={item.label}
-                        className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-slate-950/60 p-4"
-                      >
+                        className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
                         <dt className="text-xs uppercase tracking-wide text-white/60">
                           {item.label}
                         </dt>
@@ -447,8 +445,7 @@ export default function AdminPage() {
                     {billingDetails.map((item) => (
                       <div
                         key={item.label}
-                        className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-slate-950/60 p-4"
-                      >
+                        className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
                         <dt className="text-xs uppercase tracking-wide text-white/60">
                           {item.label}
                         </dt>
@@ -464,10 +461,14 @@ export default function AdminPage() {
           </div>
 
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-            <h2 className="text-lg font-semibold text-white">Editable settings</h2>
+            <h2 className="text-lg font-semibold text-white">
+              Editable settings
+            </h2>
             <div className="mt-6 space-y-5">
               <div>
-                <label className="text-sm font-medium text-white">Workspace usage</label>
+                <label className="text-sm font-medium text-white">
+                  Workspace usage
+                </label>
                 <div className="mt-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
                   <div className="flex items-center justify-between gap-3 text-sm">
                     <span className="text-white/70">workspaceUsed</span>
@@ -479,25 +480,22 @@ export default function AdminPage() {
                   {canAddToSlack ? (
                     <button
                       type="button"
-                      className="mt-4 flex w-full items-center justify-center rounded-full bg-indigo-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300"
-                    >
-                      Dodaj do Slack
+                      className="mt-4 flex w-full items-center justify-center rounded-full bg-indigo-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300">
+                      Add to Slack
                     </button>
                   ) : (
                     <div className="mt-4 space-y-3">
                       <button
                         type="button"
                         disabled
-                        className="flex w-full cursor-not-allowed items-center justify-center rounded-full bg-slate-600/70 px-5 py-2 text-sm font-semibold text-slate-300"
-                      >
-                        Dodaj do Slack
+                        className="flex w-full cursor-not-allowed items-center justify-center rounded-full bg-slate-600/70 px-5 py-2 text-sm font-semibold text-slate-300">
+                        Add to Slack
                       </button>
                       <div className="flex items-center justify-between gap-3 rounded-2xl border border-amber-300/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-100">
                         <span>Limit currentWorkspaceCount przekroczony.</span>
                         <Link
                           href="/offers"
-                          className="rounded-full bg-amber-400 px-3 py-1 font-semibold text-amber-950 transition hover:bg-amber-300"
-                        >
+                          className="rounded-full bg-amber-400 px-3 py-1 font-semibold text-amber-950 transition hover:bg-amber-300">
                           Dodaj workspace
                         </Link>
                       </div>
@@ -515,8 +513,7 @@ export default function AdminPage() {
                 <select
                   value={defaultLanguage}
                   onChange={(event) => setDefaultLanguage(event.target.value)}
-                  className="mt-3 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white focus:border-indigo-400 focus:outline-none"
-                >
+                  className="mt-3 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white focus:border-indigo-400 focus:outline-none">
                   <option value="">Select a language</option>
                   {languages.map((option) => (
                     <option key={option.value} value={option.value}>
@@ -529,8 +526,7 @@ export default function AdminPage() {
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving || isLoading}
-                className="flex w-full items-center justify-center rounded-full bg-indigo-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300 disabled:cursor-not-allowed disabled:opacity-60"
-              >
+                className="flex w-full items-center justify-center rounded-full bg-indigo-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300 disabled:cursor-not-allowed disabled:opacity-60">
                 {isSaving ? "Saving..." : "Save"}
               </button>
               {notice ? (
@@ -584,8 +580,7 @@ export default function AdminPage() {
                     type="button"
                     onClick={handlePasswordSave}
                     disabled={isSavingPassword || isLoading}
-                    className="mt-4 flex w-full items-center justify-center rounded-full bg-slate-100 px-5 py-2 text-sm font-semibold text-slate-900 shadow-lg shadow-white/10 transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60"
-                  >
+                    className="mt-4 flex w-full items-center justify-center rounded-full bg-slate-100 px-5 py-2 text-sm font-semibold text-slate-900 shadow-lg shadow-white/10 transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-60">
                     {isSavingPassword ? "Updating..." : "Change password"}
                   </button>
                   {passwordNotice ? (
