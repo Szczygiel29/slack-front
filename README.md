@@ -67,7 +67,10 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 1. Skopiuj `.env.local.example` do `.env.local` i uzupełnij wartości:
    - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
    - `NEXT_PUBLIC_API_BASE_URL`
-2. Uruchom projekt i przejdź do `/pricing`, aby przetestować Stripe Elements + SetupIntent.
+   - `NEXT_PUBLIC_SLACK_CLIENT_ID`
+   - `NEXT_PUBLIC_SLACK_REDIRECT_URI`
+2. Po każdej zmianie `.env.local` zrestartuj dev server (`npm run dev`), bo wartości `NEXT_PUBLIC_*` są wstrzykiwane podczas startu builda.
+3. Uruchom projekt i przejdź do `/pricing`, aby przetestować Stripe Elements + SetupIntent.
 
 ```bash
 cp .env.local.example .env.local
