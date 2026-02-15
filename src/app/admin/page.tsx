@@ -100,27 +100,24 @@ export default function AdminPage() {
   const [passwordError, setPasswordError] = useState("");
   const [requiresAuth, setRequiresAuth] = useState(false);
   const [reauthNotice, setReauthNotice] = useState("");
+  const slackClientId = process.env.NEXT_PUBLIC_SLACK_CLIENT_ID;
+  const slackRedirectUri = process.env.NEXT_PUBLIC_SLACK_REDIRECT_URI;
+  const slackOauthConfigured = Boolean(slackClientId && slackRedirectUri);
 
   const slackOauthUrl = useMemo(() => {
     const userEmail = user?.email ?? "";
+    if (!slackClientId || !slackRedirectUri) {
+      return "";
+    }
 
     const url = new URL("https://slack.com/oauth/v2/authorize");
-    const clientId = process.env.NEXT_PUBLIC_SLACK_CLIENT_ID;
-    if (!clientId) {
-      throw new Error("Missing NEXT_PUBLIC_SLACK_CLIENT_ID");
-    }
-
-    const redirectUri = process.env.NEXT_PUBLIC_SLACK_REDIRECT_URI;
-    if (!redirectUri) {
-      throw new Error("Missing NEXT_PUBLIC_SLACK_REDIRECT_URI");
-    }
-    url.searchParams.set("client_id", clientId);
+    url.searchParams.set("client_id", slackClientId);
     url.searchParams.set("scope", "chat:write,commands");
-    url.searchParams.set("redirect_uri", redirectUri);
+    url.searchParams.set("redirect_uri", slackRedirectUri);
     url.searchParams.set("state", userEmail);
 
     return url.toString();
-  }, [user?.email]);
+  }, [slackClientId, slackRedirectUri, user?.email]);
 
   useEffect(() => {
     let isMounted = true;
@@ -196,6 +193,7 @@ export default function AdminPage() {
   }, [user]);
 
   const canAddToSlack =
+    slackOauthConfigured &&
     (user?.currentWorkspaceCount ?? 0) > 0 &&
     user !== null &&
     user.workspaceUsed <= (user.currentWorkspaceCount ?? 0);
@@ -207,7 +205,7 @@ export default function AdminPage() {
     return [
       { label: "Email", value: user.email },
       { label: "Workspace used", value: user.workspaceUsed },
-      { label: "Workspace count", value: user.currentWorkspaceCount },
+      { label: "Workspace limit", value: user.currentWorkspaceCount },
       { label: "Created at", value: formatDateTime(user.createdAt) },
     ];
   }, [user]);
@@ -492,7 +490,7 @@ export default function AdminPage() {
                 </label>
                 <div className="mt-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
                   <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="text-white/70">workspaceUsed</span>
+                    <span className="text-white/70">Used workspaces</span>
                     <span className="font-semibold text-white">
                       {formatValue(user?.workspaceUsed ?? null)} /{" "}
                       {formatValue(user?.currentWorkspaceCount ?? null)}
@@ -513,11 +511,15 @@ export default function AdminPage() {
                         Add to Slack
                       </button>
                       <div className="flex items-center justify-between gap-3 rounded-2xl border border-amber-300/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-100">
-                        <span>Limit currentWorkspaceCount przekroczony.</span>
+                        <span>
+                          {slackOauthConfigured
+                            ? "Workspace limit reached."
+                            : "Slack OAuth is not configured (NEXT_PUBLIC_SLACK_CLIENT_ID / NEXT_PUBLIC_SLACK_REDIRECT_URI)."}
+                        </span>
                         <Link
                           href="/offers"
                           className="rounded-full bg-amber-400 px-3 py-1 font-semibold text-amber-950 transition hover:bg-amber-300">
-                          Dodaj workspace
+                          Add workspace
                         </Link>
                       </div>
                     </div>
