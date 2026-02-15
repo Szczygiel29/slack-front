@@ -168,3 +168,10 @@ Dla obiektów frontend mapuje pola: `code | value | id | name | label` jako `val
 
 - Część wywołań wysyła nagłówek `Authorization` poprzez `buildAuthHeaders` (token z `localStorage`).
 - `fetchJSON` zawsze wysyła `Content-Type: application/json` i `credentials: include`, a przy błędzie próbuje odczytać `message` z JSON.
+
+### 10) GET `/api/v1/slack/oauth/callback`
+- **Skąd wywoływane:** `src/app/api/slack/oauth/callback/route.ts` (proxy endpoint frontendu)
+- **Request JSON:** brak (GET z parametrami OAuth z Slacka, np. `code`, `state`)
+- **Response JSON:** opcjonalnie `{ "message": "string" }` przy błędzie.
+
+Frontendowy endpoint `/api/slack/oauth/callback` przekazuje query params oraz ciasteczka do backendu, a następnie przekierowuje użytkownika na `/slack/connected` (sukces) lub `/slack/connected?status=error&message=...` (błąd).
