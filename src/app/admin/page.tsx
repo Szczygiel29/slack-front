@@ -102,10 +102,7 @@ export default function AdminPage() {
   const [reauthNotice, setReauthNotice] = useState("");
 
   const slackOauthUrl = useMemo(() => {
-    const state =
-      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
-        ? crypto.randomUUID()
-        : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const userEmail = user?.email ?? "";
 
     const url = new URL("https://slack.com/oauth/v2/authorize");
     const clientId = process.env.NEXT_PUBLIC_SLACK_CLIENT_ID;
@@ -120,10 +117,10 @@ export default function AdminPage() {
     url.searchParams.set("client_id", clientId);
     url.searchParams.set("scope", "chat:write,commands");
     url.searchParams.set("redirect_uri", redirectUri);
-    url.searchParams.set("state", state);
+    url.searchParams.set("state", userEmail);
 
     return url.toString();
-  }, []);
+  }, [user?.email]);
 
   useEffect(() => {
     let isMounted = true;
