@@ -17,7 +17,14 @@ type SlackUserVM = {
   stripeSubscription: {
     subscriptionActive: boolean;
   } | null;
+  handledWorkspaces: SlackWorkspaceVM[] | null;
   createdAt: string | null;
+};
+
+type SlackWorkspaceVM = {
+  code: string;
+  name: string;
+  link: string;
 };
 
 type LanguageOption = {
@@ -83,6 +90,18 @@ const formatDateTime = (value: string | null) => {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);
+};
+
+const normalizeWorkspaceLink = (link: string) => {
+  if (!link) {
+    return "";
+  }
+
+  if (link.startsWith("http://") || link.startsWith("https://")) {
+    return link;
+  }
+
+  return `https://${link}`;
 };
 
 export default function AdminPage() {
@@ -437,6 +456,39 @@ export default function AdminPage() {
               </div>
             ) : (
               <div className="mt-6 space-y-6 text-sm">
+                <div>
+                  <h3 className="text-sm font-semibold text-white">
+                    Handled workspaces
+                  </h3>
+                  {user.handledWorkspaces && user.handledWorkspaces.length > 0 ? (
+                    <ul className="mt-3 space-y-4">
+                      {user.handledWorkspaces.map((workspace) => (
+                        <li
+                          key={workspace.code}
+                          className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-xs uppercase tracking-wide text-white/60">
+                              Workspace name
+                            </p>
+                            <p className="text-white">{workspace.name}</p>
+                          </div>
+                          <a
+                            href={normalizeWorkspaceLink(workspace.link)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center justify-center rounded-full bg-indigo-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300">
+                            Go to workspace
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <div className="mt-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-sm text-white/60">
+                      No handled workspaces connected yet.
+                    </div>
+                  )}
+                </div>
+
                 <div>
                   <h3 className="text-sm font-semibold text-white">
                     Account details
