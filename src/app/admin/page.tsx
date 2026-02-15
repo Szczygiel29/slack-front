@@ -102,12 +102,26 @@ export default function AdminPage() {
   const [reauthNotice, setReauthNotice] = useState("");
 
   const slackOauthUrl = useMemo(() => {
-    const code =
+    const state =
       typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
         ? crypto.randomUUID()
         : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    const url = new URL(buildBackendUrl("/slack/oauth/redirect"));
-    url.searchParams.set("code", code);
+
+    const url = new URL("https://slack.com/oauth/v2/authorize");
+    const clientId = process.env.NEXT_PUBLIC_SLACK_CLIENT_ID;
+    if (!clientId) {
+      throw new Error("Missing NEXT_PUBLIC_SLACK_CLIENT_ID");
+    }
+
+    const redirectUri = process.env.NEXT_PUBLIC_SLACK_REDIRECT_URI;
+    if (!redirectUri) {
+      throw new Error("Missing NEXT_PUBLIC_SLACK_REDIRECT_URI");
+    }
+    url.searchParams.set("client_id", clientId);
+    url.searchParams.set("scope", "chat:write,commands");
+    url.searchParams.set("redirect_uri", redirectUri);
+    url.searchParams.set("state", state);
+
     return url.toString();
   }, []);
 
