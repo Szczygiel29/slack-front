@@ -460,7 +460,8 @@ export default function AdminPage() {
                   <h3 className="text-sm font-semibold text-white">
                     Handled workspaces
                   </h3>
-                  {user.handledWorkspaces && user.handledWorkspaces.length > 0 ? (
+                  {user?.handledWorkspaces &&
+                  user.handledWorkspaces.length > 0 ? (
                     <ul className="mt-3 space-y-4">
                       {user.handledWorkspaces.map((workspace) => (
                         <li

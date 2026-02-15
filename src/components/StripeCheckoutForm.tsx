@@ -1,6 +1,10 @@
 "use client";
 
-import { PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import {
+  PaymentElement,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js";
 import { useState } from "react";
 
 import { fetchJSON } from "../lib/api";
@@ -40,7 +44,9 @@ export default function StripeCheckoutForm({
     const { error: submitError } = await elements.submit();
 
     if (submitError) {
-      setErrorMessage(submitError.message ?? "Nie udało się przesłać formularza.");
+      setErrorMessage(
+        submitError.message ?? "Nie udało się przesłać formularza."
+      );
       setIsSubmitting(false);
       return;
     }
@@ -70,14 +76,14 @@ export default function StripeCheckoutForm({
 
     try {
       const subscription = await fetchJSON<SubscriptionResponse>(
-        "/api/v1/stripe/subscriptions",
+        "/stripe/subscriptions",
         {
           method: "POST",
           body: JSON.stringify({
             paymentMethodId,
             offerType,
           } satisfies SubscriptionRequest),
-        },
+        }
       );
       setResult(subscription);
     } catch (error) {
@@ -104,7 +110,8 @@ export default function StripeCheckoutForm({
       {result ? (
         <div className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
           <p>
-            Status subskrypcji: {result.subscriptionActive ? "Aktywna" : "Nieaktywna"}
+            Status subskrypcji:{" "}
+            {result.subscriptionActive ? "Aktywna" : "Nieaktywna"}
           </p>
           <p>Limit emaili: {result.emailLimit}</p>
         </div>
@@ -113,8 +120,7 @@ export default function StripeCheckoutForm({
       <button
         type="submit"
         disabled={isSubmitting || !stripe}
-        className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400"
-      >
+        className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400">
         {isSubmitting ? "Przetwarzanie..." : "Potwierdź"}
       </button>
     </form>

@@ -10,10 +10,7 @@ import { buildAuthHeaders } from "../../lib/auth";
 import { buildBackendUrl } from "../../lib/backend";
 import { fetchJSON } from "../../lib/api";
 import { stripePromise } from "../../lib/stripe";
-import type {
-  OfferType,
-  SetupIntentResponse,
-} from "../../types";
+import type { OfferType, SetupIntentResponse } from "../../types";
 
 type OfferPlanResponse = {
   type: OfferType;
@@ -94,11 +91,11 @@ export default function OffersPage() {
 
     try {
       const response = await fetchJSON<SetupIntentResponse>(
-        "/api/v1/stripe/setup-intent",
+        "/stripe/setup-intent",
         {
           method: "POST",
           body: JSON.stringify({ offerType }),
-        },
+        }
       );
       setClientSecret(response.clientSecret);
       setIsModalOpen(true);
@@ -106,7 +103,7 @@ export default function OffersPage() {
       setSetupError(
         setupIntentError instanceof Error
           ? setupIntentError.message
-          : "Nie udało się utworzyć SetupIntent.",
+          : "Nie udało się utworzyć SetupIntent."
       );
     } finally {
       setIsSetupLoading(false);
@@ -121,11 +118,12 @@ export default function OffersPage() {
     <div className="min-h-screen bg-slate-950 text-white">
       <header className="border-b border-white/10 bg-slate-950/80">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-          <h1 className="text-lg font-semibold tracking-tight">Wybierz ofertę</h1>
+          <h1 className="text-lg font-semibold tracking-tight">
+            Wybierz ofertę
+          </h1>
           <Link
             href="/admin"
-            className="text-sm font-medium text-white/70 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
-          >
+            className="text-sm font-medium text-white/70 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400">
             Back to admin
           </Link>
         </div>
@@ -154,21 +152,26 @@ export default function OffersPage() {
             {offers.map((offer) => (
               <article
                 key={`${offer.type}-${offer.title}`}
-                className="flex h-full flex-col rounded-3xl border border-white/10 bg-white/5 p-6"
-              >
+                className="flex h-full flex-col rounded-3xl border border-white/10 bg-white/5 p-6">
                 <p className="text-xs font-semibold uppercase tracking-widest text-indigo-200">
                   {offer.type}
                 </p>
-                <h2 className="mt-2 text-2xl font-semibold text-white">{offer.title}</h2>
+                <h2 className="mt-2 text-2xl font-semibold text-white">
+                  {offer.title}
+                </h2>
                 <p className="mt-1 text-sm text-white/70">{offer.audience}</p>
                 <p className="mt-5 text-3xl font-bold text-white">
                   {formatPrice(offer.pricePerMonthUsd)}
-                  <span className="ml-1 text-sm font-medium text-white/60">/month</span>
+                  <span className="ml-1 text-sm font-medium text-white/60">
+                    /month
+                  </span>
                 </p>
 
                 <ul className="mt-6 flex-1 space-y-2 text-sm text-white/85">
                   {offer.included.map((item) => (
-                    <li key={item} className="rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2">
+                    <li
+                      key={item}
+                      className="rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2">
                       {item}
                     </li>
                   ))}
@@ -178,8 +181,7 @@ export default function OffersPage() {
                   type="button"
                   onClick={() => handleSelectOffer(offer.type)}
                   disabled={isSetupLoading}
-                  className="mt-6 w-full rounded-full bg-indigo-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300"
-                >
+                  className="mt-6 w-full rounded-full bg-indigo-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300">
                   {isSetupLoading && selectedOffer === offer.type
                     ? "Ładowanie..."
                     : "Wybierz"}
@@ -192,8 +194,7 @@ export default function OffersPage() {
       <CheckoutModal
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        title="Potwierdź subskrypcję"
-      >
+        title="Potwierdź subskrypcję">
         {!stripePromise ? (
           <p className="text-sm text-red-400">
             Brak klucza Stripe. Ustaw NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.

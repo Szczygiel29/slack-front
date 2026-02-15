@@ -45,11 +45,11 @@ export default function PricingClient() {
 
     try {
       const response = await fetchJSON<SetupIntentResponse>(
-        "/api/v1/stripe/setup-intent",
+        "/stripe/setup-intent",
         {
           method: "POST",
           body: JSON.stringify({ offerType }),
-        },
+        }
       );
       setClientSecret(response.clientSecret);
       setIsModalOpen(true);
@@ -87,17 +87,19 @@ export default function PricingClient() {
         {plans.map((plan) => (
           <div
             key={plan.offerType}
-            className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
-          >
-            <h2 className="text-xl font-semibold text-slate-900">{plan.title}</h2>
-            <p className="mt-2 text-2xl font-bold text-slate-900">{plan.price}</p>
+            className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 className="text-xl font-semibold text-slate-900">
+              {plan.title}
+            </h2>
+            <p className="mt-2 text-2xl font-bold text-slate-900">
+              {plan.price}
+            </p>
             <p className="mt-3 text-sm text-slate-600">{plan.description}</p>
             <button
               type="button"
               onClick={() => handleSelectPlan(plan.offerType)}
               className="mt-6 w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-400"
-              disabled={isLoading}
-            >
+              disabled={isLoading}>
               {isLoading && selectedOffer === plan.offerType
                 ? "Ładowanie..."
                 : "Wybierz"}
@@ -109,8 +111,7 @@ export default function PricingClient() {
       <CheckoutModal
         isOpen={isModalOpen}
         onClose={handleClose}
-        title="Potwierdź subskrypcję"
-      >
+        title="Potwierdź subskrypcję">
         {!stripePromise ? (
           <p className="text-sm text-red-600">
             Brak klucza Stripe. Ustaw NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY.
