@@ -13,7 +13,7 @@ type SlackUserVM = {
   subscriptionStartedAt: string | null;
   nextBillingAt: string | null;
   workspaceUsed: number;
-  currentWorkspaceCount: number | null;
+  workspaceLimit: number | null;
   stripeSubscription: {
     subscriptionActive: boolean;
   } | null;
@@ -213,9 +213,9 @@ export default function AdminPage() {
 
   const canAddToSlack =
     slackOauthConfigured &&
-    (user?.currentWorkspaceCount ?? 0) > 0 &&
+    (user?.workspaceLimit ?? 0) > 0 &&
     user !== null &&
-    user.workspaceUsed <= (user.currentWorkspaceCount ?? 0);
+    user.workspaceUsed <= (user.workspaceLimit ?? 0);
 
   const profileDetails = useMemo(() => {
     if (!user) {
@@ -224,7 +224,7 @@ export default function AdminPage() {
     return [
       { label: "Email", value: user.email },
       { label: "Workspace used", value: user.workspaceUsed },
-      { label: "Workspace limit", value: user.currentWorkspaceCount },
+      { label: "Workspace limit", value: user.workspaceLimit },
       { label: "Created at", value: formatDateTime(user.createdAt) },
     ];
   }, [user]);
@@ -546,7 +546,7 @@ export default function AdminPage() {
                     <span className="text-white/70">Used workspaces</span>
                     <span className="font-semibold text-white">
                       {formatValue(user?.workspaceUsed ?? null)} /{" "}
-                      {formatValue(user?.currentWorkspaceCount ?? null)}
+                      {formatValue(user?.workspaceLimit ?? null)}
                     </span>
                   </div>
                   {canAddToSlack ? (

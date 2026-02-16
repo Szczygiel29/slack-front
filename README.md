@@ -30,7 +30,7 @@ Poniżej jest lista endpointów wywoływanych w kodzie frontendu (`src/app`, `sr
 
 ### Bazowe URL-e
 - `NEXT_PUBLIC_BACKEND_URL` (domyślnie: `http://localhost:8080/api/v1`) jest używany przez `buildBackendUrl(...)`.
-- `NEXT_PUBLIC_API_BASE_URL` (domyślnie: `http://localhost:8080`) jest używany przez `fetchJSON(...)` / `buildApiUrl(...)`.
+- `NEXT_PUBLIC_BACKEND_URL` (domyślnie: `http://localhost:8080`) jest używany przez `fetchJSON(...)` / `buildApiUrl(...)`.
 
 ### Endpointy auth
 - `POST /api/v1/auth/register`
@@ -66,7 +66,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 1. Skopiuj `.env.local.example` do `.env.local` i uzupełnij wartości:
    - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
-   - `NEXT_PUBLIC_API_BASE_URL`
+   - `NEXT_PUBLIC_BACKEND_URL`
    - `NEXT_PUBLIC_SLACK_CLIENT_ID`
    - `NEXT_PUBLIC_SLACK_REDIRECT_URI`
 2. Po każdej zmianie `.env.local` zrestartuj dev server (`npm run dev`), bo wartości `NEXT_PUBLIC_*` są wstrzykiwane podczas startu builda.
