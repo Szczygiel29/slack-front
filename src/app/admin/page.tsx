@@ -586,17 +586,33 @@ export default function AdminPage() {
                 <p className="mt-1 text-xs text-white/60">
                   Choose the default AWS Translate language.
                 </p>
-                <select
-                  value={defaultLanguage}
-                  onChange={(event) => setDefaultLanguage(event.target.value)}
-                  className="mt-3 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white focus:border-indigo-400 focus:outline-none">
-                  <option value="">Select a language</option>
-                  {languages.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative mt-3">
+                  <select
+                    value={defaultLanguage}
+                    onChange={(event) => setDefaultLanguage(event.target.value)}
+                    className="w-full appearance-none rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 pr-10 text-sm text-white focus:border-indigo-400 focus:outline-none">
+                    <option value="">Select a language</option>
+                    {languages.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-white/70">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                      className="size-4"
+                      aria-hidden="true">
+                      <path
+                        fillRule="evenodd"
+                        d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.939a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  </span>
+                </div>
               </div>
               <button
                 type="button"
