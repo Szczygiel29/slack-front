@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
@@ -105,6 +105,9 @@ const normalizeWorkspaceLink = (link: string) => {
 };
 
 export default function AdminPage() {
+  const [activeTab, setActiveTab] = useState<"general" | "payments">(
+    "general"
+  );
   const [user, setUser] = useState<SlackUserVM | null>(null);
   const [languages, setLanguages] = useState<LanguageOption[]>([]);
   const [defaultLanguage, setDefaultLanguage] = useState("");
@@ -397,8 +400,7 @@ export default function AdminPage() {
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 py-14">
-        {user ? (
+      <main className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 py-14">        {user ? (
           <section className="space-y-3">
             {!user.stripeSubscription ? (
               <Link
@@ -406,7 +408,7 @@ export default function AdminPage() {
                 className="flex w-full flex-col items-center justify-center gap-1 rounded-3xl bg-rose-500 px-6 py-4 text-base font-semibold text-white shadow-lg shadow-rose-500/30 transition hover:bg-rose-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-200">
                 <span>Start subscription</span>
                 <span className="text-xs font-medium text-rose-50/90">
-                  Przejdź do wyboru planu
+                  Go to plan selection
                 </span>
               </Link>
             ) : subscriptionActive ? (
@@ -425,6 +427,29 @@ export default function AdminPage() {
             )}
           </section>
         ) : null}
+        <section className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setActiveTab("general")}
+            className={`rounded-full border px-5 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300 ${
+              activeTab === "general"
+                ? "border-indigo-400 bg-indigo-500 text-white shadow-lg shadow-indigo-500/30"
+                : "border-white/20 bg-white/5 text-white/70 hover:bg-white/10"
+            }`}>
+            General information
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("payments")}
+            className={`rounded-full border px-5 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300 ${
+              activeTab === "payments"
+                ? "border-indigo-400 bg-indigo-500 text-white shadow-lg shadow-indigo-500/30"
+                : "border-white/20 bg-white/5 text-white/70 hover:bg-white/10"
+            }`}>
+            Payments
+          </button>
+        </section>
+
         <section className="space-y-4">
           <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/70">
             <span className="h-2 w-2 rounded-full bg-emerald-400" />
@@ -437,15 +462,24 @@ export default function AdminPage() {
           </p>
         </section>
 
-        <section className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+        <section
+          className={`grid gap-8 ${
+            activeTab === "general" ? "lg:grid-cols-[1.1fr_0.9fr]" : ""
+          }`}>
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
             <h2 className="text-lg font-semibold text-white">
-              Profile overview
+              {activeTab === "general" ? "Profile overview" : "Payment details"}
             </h2>
-            <p className="mt-2 text-sm text-white/60">
-              All fields are read-only except handled emails and default
-              language.
-            </p>
+            {activeTab === "general" ? (
+              <p className="mt-2 text-sm text-white/60">
+                All fields are read-only except handled emails and default
+                language.
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-white/60">
+                Subscription and billing information for your account.
+              </p>
+            )}
             {isLoading ? (
               <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-sm text-white/60">
                 Loading admin profile...
@@ -456,83 +490,91 @@ export default function AdminPage() {
               </div>
             ) : (
               <div className="mt-6 space-y-6 text-sm">
-                <div>
-                  <h3 className="text-sm font-semibold text-white">
-                    Handled workspaces
-                  </h3>
-                  {user?.handledWorkspaces &&
-                  user.handledWorkspaces.length > 0 ? (
-                    <ul className="mt-3 space-y-4">
-                      {user.handledWorkspaces.map((workspace) => (
-                        <li
-                          key={workspace.code}
-                          className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4 sm:flex-row sm:items-center sm:justify-between">
-                          <div>
-                            <p className="text-xs uppercase tracking-wide text-white/60">
-                              Workspace name
-                            </p>
-                            <p className="text-white">{workspace.name}</p>
-                          </div>
-                          <a
-                            href={normalizeWorkspaceLink(workspace.link)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center justify-center rounded-full bg-indigo-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300">
-                            Go to workspace
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div className="mt-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-sm text-white/60">
-                      No handled workspaces connected yet.
+                {activeTab === "general" ? (
+                  <>
+                    <div>
+                      <h3 className="text-sm font-semibold text-white">
+                        Handled workspaces
+                      </h3>
+                      {user?.handledWorkspaces &&
+                      user.handledWorkspaces.length > 0 ? (
+                        <ul className="mt-3 space-y-4">
+                          {user.handledWorkspaces.map((workspace) => (
+                            <li
+                              key={workspace.code}
+                              className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+                              <div>
+                                <p className="text-xs uppercase tracking-wide text-white/60">
+                                  Workspace name
+                                </p>
+                                <p className="text-white">{workspace.name}</p>
+                              </div>
+                              <a
+                                href={normalizeWorkspaceLink(workspace.link)}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center justify-center rounded-full bg-indigo-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300">
+                                Go to workspace
+                              </a>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <div className="mt-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-sm text-white/60">
+                          No handled workspaces connected yet.
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
 
-                <div>
-                  <h3 className="text-sm font-semibold text-white">
-                    Account details
-                  </h3>
-                  <dl className="mt-3 space-y-4">
-                    {profileDetails.map((item) => (
-                      <div
-                        key={item.label}
-                        className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                        <dt className="text-xs uppercase tracking-wide text-white/60">
-                          {item.label}
-                        </dt>
-                        <dd className="text-white">
-                          {formatValue(item.value)}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-white">
-                    Payment details
-                  </h3>
-                  <dl className="mt-3 space-y-4">
-                    {billingDetails.map((item) => (
-                      <div
-                        key={item.label}
-                        className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                        <dt className="text-xs uppercase tracking-wide text-white/60">
-                          {item.label}
-                        </dt>
-                        <dd className="text-white">
-                          {formatValue(item.value)}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-white">
+                        Account details
+                      </h3>
+                      <dl className="mt-3 space-y-4">
+                        {profileDetails.map((item) => (
+                          <div
+                            key={item.label}
+                            className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                            <dt className="text-xs uppercase tracking-wide text-white/60">
+                              {item.label}
+                            </dt>
+                            <dd className="text-white">
+                              {formatValue(item.value)}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">
+                      Payment details
+                    </h3>
+                    <dl className="mt-3 space-y-4">
+                      {billingDetails.map((item) => (
+                        <div
+                          key={item.label}
+                          className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                          <dt className="text-xs uppercase tracking-wide text-white/60">
+                            {item.label}
+                          </dt>
+                          <dd className="text-white">
+                            {formatValue(item.value)}
+                          </dd>
+                        </div>
+                      ))}
+                    </dl>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+          <div
+            className={`rounded-3xl border border-white/10 bg-white/5 p-6 ${
+              activeTab === "payments" ? "hidden" : ""
+            }`}>
             <h2 className="text-lg font-semibold text-white">
               Editable settings
             </h2>
@@ -694,3 +736,4 @@ export default function AdminPage() {
     </div>
   );
 }
+

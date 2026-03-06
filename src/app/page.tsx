@@ -3,6 +3,9 @@
 import Link from "next/link";
 import { useState } from "react";
 
+import { useOfferPlans } from "../hooks/useOfferPlans";
+import { formatUsdPrice } from "../lib/offers";
+
 const navLinks = [
   { label: "Features", href: "#features" },
   { label: "Pricing", href: "#pricing" },
@@ -174,35 +177,6 @@ const featureCards = [
   },
 ];
 
-const pricingPlans = [
-  {
-    name: "Individual",
-    price: "$12",
-    description: "For individuals or small teams getting started.",
-    features: [
-      "Manual Digest + Thread Summary",
-      "Translate In Place",
-      "Reply Suggestions with approval",
-      "Standard usage limits",
-    ],
-    cta: "Get started",
-  },
-  {
-    name: "Business",
-    price: "$24",
-    description: "For teams with higher usage needs.",
-    features: [
-      "Everything in Individual",
-      "Automatic Digest scheduling",
-      "Follow-up Tracker (SLA reminders)",
-      "Action Items Extractor + Decision Log",
-      "Higher usage limits",
-    ],
-    cta: "Coming soon",
-    highlighted: true,
-  },
-];
-
 const faqs = [
   {
     question: "What does Automatic Digest do?",
@@ -245,6 +219,8 @@ const logos = ["VectorLab", "Pulse", "Northwind", "Orbit", "Nimbus"];
 
 export default function Home() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { offers, isLoading: isOffersLoading, error: offersError } =
+    useOfferPlans();
 
   return (
     <div className="bg-slate-950 text-white">
@@ -622,8 +598,8 @@ export default function Home() {
                 Simple pricing per user per month
               </h2>
               <p className="mt-4 text-sm text-white/70">
-                Two plans for digest, follow-up tracking, action extraction,
-                summaries, translations, and approved replies in Slack.
+                Plan names, descriptions, and pricing are loaded live from the
+                backend.
               </p>
             </div>
             <p className="text-sm text-white/60">
@@ -641,27 +617,49 @@ export default function Home() {
                 </tr>
               </thead>
               <tbody>
-                {pricingPlans.map((plan) => (
+                {isOffersLoading ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-5 text-sm text-white/70">
+                      <span className="inline-flex items-center gap-3">
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white/80" />
+                        Loading plans...
+                      </span>
+                    </td>
+                  </tr>
+                ) : offersError ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-5 text-sm text-rose-200">
+                      {offersError}
+                    </td>
+                  </tr>
+                ) : offers.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-5 text-sm text-white/70">
+                      No plans available.
+                    </td>
+                  </tr>
+                ) : (
+                  offers.map((plan) => (
                   <tr
-                    key={plan.name}
+                    key={`${plan.type}-${plan.title}`}
                     className="border-b border-white/5 last:border-b-0">
                     <td className="px-6 py-5 align-top">
                       <p className="text-base font-semibold text-white">
-                        {plan.name}
+                        {plan.title}
                       </p>
                       <p className="mt-1 text-xs text-white/60">
-                        {plan.description}
+                        {plan.audience}
                       </p>
                     </td>
                     <td className="px-6 py-5 align-top text-lg font-semibold text-white">
-                      {plan.price}
+                      {formatUsdPrice(plan.pricePerMonthUsd)}
                       <span className="text-xs font-normal text-white/60">
                         /user/mo
                       </span>
                     </td>
                     <td className="px-6 py-5 align-top">
                       <ul className="space-y-2">
-                        {plan.features.map((feature) => (
+                        {plan.included.map((feature) => (
                           <li key={feature} className="flex items-start gap-2">
                             <span className="mt-1 h-2 w-2 rounded-full bg-emerald-400" />
                             <span>{feature}</span>
@@ -673,15 +671,16 @@ export default function Home() {
                       <a
                         href="#contact"
                         className={`inline-flex items-center justify-center rounded-full px-4 py-2 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300 ${
-                          plan.highlighted
+                          plan.type === "BUSINESS"
                             ? "bg-indigo-500 text-white hover:bg-indigo-400"
                             : "border border-white/20 text-white/80 hover:border-white/40 hover:text-white"
                         }`}>
-                        {plan.cta}
+                        Choose plan
                       </a>
                     </td>
                   </tr>
-                ))}
+                  ))
+                )}
               </tbody>
             </table>
           </div>

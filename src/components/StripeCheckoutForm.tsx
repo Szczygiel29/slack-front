@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   PaymentElement,
@@ -33,7 +33,7 @@ export default function StripeCheckoutForm({
     event.preventDefault();
 
     if (!stripe || !elements) {
-      setErrorMessage("Stripe nie jest jeszcze gotowy.");
+      setErrorMessage("Stripe is not ready yet.");
       return;
     }
 
@@ -44,9 +44,7 @@ export default function StripeCheckoutForm({
     const { error: submitError } = await elements.submit();
 
     if (submitError) {
-      setErrorMessage(
-        submitError.message ?? "Nie udało się przesłać formularza."
-      );
+      setErrorMessage(submitError.message ?? "Failed to submit the form.");
       setIsSubmitting(false);
       return;
     }
@@ -58,7 +56,7 @@ export default function StripeCheckoutForm({
     });
 
     if (error) {
-      setErrorMessage(error.message ?? "Nie udało się potwierdzić płatności.");
+      setErrorMessage(error.message ?? "Failed to confirm payment.");
       setIsSubmitting(false);
       return;
     }
@@ -69,7 +67,7 @@ export default function StripeCheckoutForm({
         : null;
 
     if (!paymentMethodId) {
-      setErrorMessage("Brak payment method po potwierdzeniu.");
+      setErrorMessage("Missing payment method after confirmation.");
       setIsSubmitting(false);
       return;
     }
@@ -88,9 +86,7 @@ export default function StripeCheckoutForm({
       setResult(subscription);
     } catch (error) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Nie udało się utworzyć subskrypcji.";
+        error instanceof Error ? error.message : "Failed to create subscription.";
       setErrorMessage(message);
     } finally {
       setIsSubmitting(false);
@@ -110,10 +106,9 @@ export default function StripeCheckoutForm({
       {result ? (
         <div className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
           <p>
-            Status subskrypcji:{" "}
-            {result.subscriptionActive ? "Aktywna" : "Nieaktywna"}
+            Subscription status: {result.subscriptionActive ? "Active" : "Inactive"}
           </p>
-          <p>Limit emaili: {result.emailLimit}</p>
+          <p>Email limit: {result.emailLimit}</p>
         </div>
       ) : null}
 
@@ -121,7 +116,7 @@ export default function StripeCheckoutForm({
         type="submit"
         disabled={isSubmitting || !stripe}
         className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400">
-        {isSubmitting ? "Przetwarzanie..." : "Potwierdź"}
+        {isSubmitting ? "Processing..." : "Confirm"}
       </button>
     </form>
   );

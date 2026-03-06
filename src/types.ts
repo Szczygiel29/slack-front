@@ -1,5 +1,13 @@
 export type OfferType = "INDIVIDUAL" | "BUSINESS";
 
+export interface OfferPlanResponse {
+  type: OfferType;
+  title: string;
+  audience: string;
+  pricePerMonthUsd: number;
+  included: string[];
+}
+
 export interface SetupIntentRequest {
   offerType: OfferType;
 }

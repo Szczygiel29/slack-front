@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 
 import { buildBackendUrl } from "../../../../../lib/backend";
 
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
     } catch {
       errorRedirect.searchParams.set(
         "message",
-        "Nie udało się połączyć aplikacji ze Slackiem."
+        "Failed to connect the app to Slack."
       );
     }
 
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
     errorRedirect.searchParams.set("status", "error");
     errorRedirect.searchParams.set(
       "message",
-      "Błąd połączenia z serwerem podczas autoryzacji Slacka."
+      "Server connection error during Slack authorization."
     );
     return NextResponse.redirect(errorRedirect);
   }
