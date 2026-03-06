@@ -11,15 +11,16 @@ const navLinks = [
 ];
 
 const benefits = [
-  "Translate Slack messages instantly with AWS Translate",
-  "Keep terminology consistent with Custom Terminology glossaries",
-  "Generate summaries and replies on demand without message storage",
+  "Automatic Digest on schedule: frequency, hour, and time window",
+  "Follow-up Tracker with SLA reminders for unanswered threads",
+  "Action extraction, summaries, translations, and approved replies in Slack",
 ];
 
 const featureCards = [
   {
-    title: "Slack translation",
-    description: "Translate messages in-channel with AWS Amazon Translate.",
+    title: "Automatic Digest",
+    description:
+      "Generates digest updates on schedule using configured frequency, hour, and time window.",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -37,9 +38,9 @@ const featureCards = [
     ),
   },
   {
-    title: "Custom Terminology",
+    title: "Follow-up Tracker",
     description:
-      "Apply approved company and product terms for consistent translations.",
+      "Detects unanswered thread messages and sends reminders after SLA timeout.",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -57,9 +58,9 @@ const featureCards = [
     ),
   },
   {
-    title: "Thread TL;DR summaries",
+    title: "Action Items Extractor",
     description:
-      "Get quick summaries of long Slack threads in a single response.",
+      "Extracts tasks from threads, lets users edit them, then posts to thread or owner DMs.",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -77,9 +78,9 @@ const featureCards = [
     ),
   },
   {
-    title: "Incremental summary updates",
+    title: "Manual Digest",
     description:
-      "Update summaries as new messages arrive using payload-based requests.",
+      "Runs digest on demand and sends the result directly to the requesting user in DM.",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -97,9 +98,9 @@ const featureCards = [
     ),
   },
   {
-    title: "Reply suggestions",
+    title: "Reply Suggestions",
     description:
-      "Receive three tone-based replies: FORMAL, CASUAL, SUPPORT, SALES.",
+      "Generates a suggested reply and sends it only after manual user approval.",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -117,9 +118,48 @@ const featureCards = [
     ),
   },
   {
-    title: "Stateless processing",
+    title: "Thread Summary",
+    description: "Creates a focused summary for a specific Slack thread.",
+    icon: (
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        className="h-6 w-6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M3.75 5.25h16.5v13.5H3.75zM7.5 9h9m-9 3h6"
+        />
+      </svg>
+    ),
+  },
+  {
+    title: "Translate In Place",
     description:
-      "Message content is processed on-the-fly and not stored in a database.",
+      "Translates a selected message and lets users publish the translation inside the thread.",
+    icon: (
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        className="h-6 w-6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5">
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M4.5 6.75h9m-9 4.5h6m7.5-6v12m-3-9l3-3 3 3m-6 6l3 3 3-3"
+        />
+      </svg>
+    ),
+  },
+  {
+    title: "Decision Log",
+    description:
+      "Captures team decisions with context and surfaces them later in Home view.",
     icon: (
       <svg
         viewBox="0 0 24 24"
@@ -140,9 +180,9 @@ const pricingPlans = [
     price: "$12",
     description: "For individuals or small teams getting started.",
     features: [
-      "Translation + Custom Terminology",
-      "Thread TL;DR summaries",
-      "Reply suggestions (3 tones)",
+      "Manual Digest + Thread Summary",
+      "Translate In Place",
+      "Reply Suggestions with approval",
       "Standard usage limits",
     ],
     cta: "Get started",
@@ -153,8 +193,10 @@ const pricingPlans = [
     description: "For teams with higher usage needs.",
     features: [
       "Everything in Individual",
+      "Automatic Digest scheduling",
+      "Follow-up Tracker (SLA reminders)",
+      "Action Items Extractor + Decision Log",
       "Higher usage limits",
-      "Business Q&A (add-on)",
     ],
     cta: "Coming soon",
     highlighted: true,
@@ -163,39 +205,39 @@ const pricingPlans = [
 
 const faqs = [
   {
-    question: "How does pricing work?",
+    question: "What does Automatic Digest do?",
     answer:
-      "Plans are billed per user per month. Limits depend on usage and model configuration.",
+      "It generates digest updates automatically based on configured frequency, hour, and selected time window.",
+  },
+  {
+    question: "How does Follow-up Tracker work?",
+    answer:
+      "The app monitors threads for missing responses and posts reminders after your SLA threshold is reached.",
+  },
+  {
+    question: "Can Action Items be edited before publishing?",
+    answer:
+      "Yes. Extracted tasks can be edited before publishing to the thread or DMing owners.",
+  },
+  {
+    question: "How is Manual Digest delivered?",
+    answer:
+      "Manual Digest runs on user request and returns results directly in DM.",
+  },
+  {
+    question: "Are Reply Suggestions sent automatically?",
+    answer:
+      "No. Suggestions require manual approval before being posted.",
+  },
+  {
+    question: "What is Decision Log used for?",
+    answer:
+      "It stores team decisions with context and makes them visible later in Home for faster alignment.",
   },
   {
     question: "What permissions does the app request?",
     answer:
-      "We request Slack scopes needed to read message payloads and post translations, summaries, or reply suggestions.",
-  },
-  {
-    question: "Where is data stored?",
-    answer:
-      "Message content is processed on-the-fly and not stored in a database.",
-  },
-  {
-    question: "Can I cancel anytime?",
-    answer:
-      "Yes, you can cancel or downgrade in seconds. Your data remains available during the term.",
-  },
-  {
-    question: "How do summary updates work?",
-    answer:
-      "Send a new message payload to update an existing summary without storing prior messages.",
-  },
-  {
-    question: "Which reply tones are supported?",
-    answer:
-      "Choose from FORMAL, CASUAL, SUPPORT, or SALES for three suggested replies.",
-  },
-  {
-    question: "How does Slack installation work?",
-    answer:
-      "Install from Slack, authorize, then complete setup in your dashboard before going live.",
+      "Only Slack scopes required to read thread payloads and post digests, reminders, summaries, translations, and approved replies.",
   },
 ];
 
@@ -226,6 +268,12 @@ export default function Home() {
                 <span className="absolute -bottom-1 left-0 h-0.5 w-full origin-left scale-x-0 rounded-full bg-indigo-400 transition-transform duration-300 group-hover:scale-x-100" />
               </a>
             ))}
+            <Link
+              href="/blog"
+              className="group relative text-sm font-medium text-slate-200 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400">
+              Blog
+              <span className="absolute -bottom-1 left-0 h-0.5 w-full origin-left scale-x-0 rounded-full bg-indigo-400 transition-transform duration-300 group-hover:scale-x-100" />
+            </Link>
           </div>
           <div className="hidden items-center gap-3 md:flex">
             <Link
@@ -277,6 +325,12 @@ export default function Home() {
                   {link.label}
                 </a>
               ))}
+              <Link
+                href="/blog"
+                className="text-white/80 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400"
+                onClick={() => setIsMenuOpen(false)}>
+                Blog
+              </Link>
               <a
                 href="#pricing"
                 className="rounded-full border border-white/20 px-4 py-2 text-center font-medium text-white/80 transition hover:border-white/40 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400">
@@ -305,15 +359,15 @@ export default function Home() {
             <div className="flex-1">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-medium text-white/70">
                 <span className="h-2 w-2 rounded-full bg-emerald-400" />
-                Translate, summarize, and draft replies in Slack
+                Digest, follow-up, summaries, translation, and decision tracking
               </div>
               <h1 className="mt-6 text-4xl font-semibold leading-tight text-white md:text-5xl">
-                The Slack assistant for translation and summaries
+                The Slack assistant for digest, follow-up, and action flow
               </h1>
               <p className="mt-4 text-base text-white/70 md:text-lg">
-                Slackmate helps teams translate messages, apply consistent
-                terminology, summarize threads, and draft replies without
-                leaving Slack.
+                Slackmate automates digest delivery, tracks unanswered threads,
+                extracts action items, summarizes threads, translates messages
+                in place, and keeps a reusable decision log.
               </p>
               <ul className="mt-6 space-y-3 text-sm text-white/80">
                 {benefits.map((benefit) => (
@@ -382,10 +436,10 @@ export default function Home() {
                     </span>
                   </div>
                   <div className="mt-4 space-y-3">
-                    {[
-                      "Translation applied",
-                      "Summary generated",
-                      "Reply options ready",
+                  {[
+                      "Digest scheduled",
+                      "Follow-up reminder queued",
+                      "Action items extracted",
                     ].map((step) => (
                       <div
                         key={step}
@@ -398,8 +452,8 @@ export default function Home() {
                 </div>
                 <div className="mt-6 grid gap-4 sm:grid-cols-2">
                   {[
-                    { label: "Translations", value: "48 today" },
-                    { label: "Summaries", value: "12 today" },
+                    { label: "Digests", value: "18 today" },
+                    { label: "SLA reminders", value: "27 sent" },
                   ].map((item) => (
                     <div
                       key={item.label}
@@ -412,13 +466,12 @@ export default function Home() {
                   ))}
                 </div>
                 <div className="absolute -right-6 -top-6 hidden rounded-2xl border border-white/10 bg-white/10 p-4 text-xs text-white/70 shadow-lg shadow-indigo-500/20 backdrop-blur sm:block">
-                  Translations, summaries, and reply suggestions in Slack.
+                  One Slack workflow for digest, follow-up, actions, and decisions.
                 </div>
               </div>
               <div className="mt-6 rounded-2xl border border-white/10 bg-white/10 p-4 backdrop-blur">
                 <p className="text-xs text-white/70">
-                  Glass insight card · 3 teams onboarded this week · 98%
-                  response satisfaction rate
+                  Productive teams keep context in threads and decisions in one place
                 </p>
               </div>
             </div>
@@ -443,8 +496,8 @@ export default function Home() {
             </div>
             <div className="flex-1 rounded-3xl border border-white/10 bg-white/5 p-6">
               <p className="text-sm text-white/70">
-                Teams keep global conversations moving with fast translations
-                and summaries.
+                Teams run aligned workflows with automatic digests, SLA
+                reminders, and decision visibility.
               </p>
               <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
                 <div className="flex items-center gap-1 text-amber-300">
@@ -460,8 +513,8 @@ export default function Home() {
                   ))}
                 </div>
                 <p className="mt-3 text-sm text-white/80">
-                  “Translations are instant and the TL;DR keeps every thread
-                  aligned.”
+                  Digest and follow-up reminders reduced missed replies and
+                  made ownership clear in every thread.
                 </p>
                 <p className="mt-3 text-xs text-white/50">
                   Jordan Lee · Ops Lead, Northwind
@@ -477,14 +530,15 @@ export default function Home() {
               Features
             </p>
             <h2 className="mt-3 text-3xl font-semibold text-white">
-              Everything you need for translation and summaries in Slack
+              Everything your team needs to run Slack threads end-to-end
             </h2>
             <p className="mt-4 text-sm text-white/70">
-              Translate messages, summarize threads, and draft replies without
-              leaving Slack.
+              Configure automated digests, track unanswered threads, extract
+              tasks, summarize context, translate in place, and keep decisions
+              visible in Home.
             </p>
           </div>
-          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {featureCards.map((feature) => (
               <div
                 key={feature.title}
@@ -511,36 +565,36 @@ export default function Home() {
                   How it works
                 </p>
                 <h2 className="mt-3 text-3xl font-semibold text-white">
-                  Stateless assistance from payload to response
+                  From thread signal to delivered action
                 </h2>
                 <p className="mt-4 text-sm text-white/70">
-                  Slack payloads flow through translation and optional summaries
-                  or reply suggestions, then return to Slack without storing
-                  message content.
+                  Slack events trigger digest, tracking, extraction, and
+                  suggestion flows. Users approve sensitive output before final
+                  posting.
                 </p>
               </div>
               <div className="grid gap-4">
                 {[
                   {
-                    title: "Slack payload received",
+                    title: "Thread signal detected",
                     description:
-                      "A message or thread payload arrives from Slack.",
+                      "A new message, schedule trigger, or SLA timeout starts the workflow.",
                   },
                   {
-                    title: "Translate and assist",
+                    title: "Assistant prepares output",
                     description:
-                      "AWS Translate runs first, then summaries or reply suggestions are generated if requested.",
+                      "The app builds digest, summary, actions, translation, or reply suggestion from thread context.",
                   },
                   {
-                    title: "Response back to Slack",
+                    title: "Approve and publish",
                     description:
-                      "Results return to Slack immediately with no message database storage.",
+                      "Approved output is posted to thread or DM, and key decisions are available later in Home.",
                   },
                 ].map((step, index) => (
                   <div
                     key={step.title}
                     className="flex gap-4 rounded-2xl border border-white/10 bg-white/5 p-5">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-500 text-sm font-semibold text-white">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-500 text-sm font-semibold leading-none tabular-nums text-white">
                       {index + 1}
                     </div>
                     <div>
@@ -568,8 +622,8 @@ export default function Home() {
                 Simple pricing per user per month
               </h2>
               <p className="mt-4 text-sm text-white/70">
-                Two plans for translation, summaries, and reply suggestions in
-                Slack.
+                Two plans for digest, follow-up tracking, action extraction,
+                summaries, translations, and approved replies in Slack.
               </p>
             </div>
             <p className="text-sm text-white/60">
@@ -633,12 +687,11 @@ export default function Home() {
           </div>
           <div className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-6">
             <h3 className="text-lg font-semibold text-white">
-              Business Q&A (add-on)
+              Decision intelligence in Home
             </h3>
             <p className="mt-2 text-sm text-white/70">
-              Answer policy, product, and process questions using
-              organization-provided context at request time, without storing
-              message content.
+              Business plan teams can keep a decision log with context and
+              revisit key team decisions directly from Home.
             </p>
           </div>
         </section>
@@ -657,7 +710,7 @@ export default function Home() {
                 </h2>
                 <p className="mt-4 text-sm text-white/70">
                   We use least-privilege scopes and verified Slack requests
-                  while keeping message content out of a database.
+                  while keeping core workflows controlled and auditable.
                 </p>
               </div>
               <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
@@ -665,8 +718,8 @@ export default function Home() {
                   {[
                     "OAuth 2.0 with granular scopes",
                     "Verified Slack request signatures",
-                    "Stateless processing (no message database)",
-                    "Payload-based summaries and replies",
+                    "Manual approval gate for reply suggestions",
+                    "Decision visibility in Home with contextual trace",
                   ].map((item) => (
                     <li key={item} className="flex items-start gap-3">
                       <span className="mt-1 h-2 w-2 rounded-full bg-indigo-400" />
@@ -675,7 +728,7 @@ export default function Home() {
                   ))}
                 </ul>
                 <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-xs text-white/60">
-                  Secure by design · Verified requests · No message storage
+                  Secure by design · Controlled output · Team-wide visibility
                 </div>
               </div>
             </div>
@@ -719,11 +772,11 @@ export default function Home() {
             <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <h2 className="text-3xl font-semibold text-white">
-                  Ready to translate and summarize in Slack?
+                  Ready to automate digest and follow-up in Slack?
                 </h2>
                 <p className="mt-3 text-sm text-white/70">
-                  Install Slackmate in minutes and keep every thread aligned
-                  with fast translations and TL;DRs.
+                  Install Slackmate, set your schedule and SLA, and start
+                  shipping cleaner thread outcomes in minutes.
                 </p>
               </div>
               <div className="flex flex-wrap gap-4">
