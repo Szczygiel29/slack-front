@@ -5,17 +5,27 @@ import Link from "next/link";
 
 import { buildBackendUrl } from "../../lib/backend";
 import { buildAuthHeaders } from "../../lib/auth";
+import type { OfferType } from "../../types";
 
 type SlackUserVM = {
   id: number;
   email: string;
+  offerType?: OfferType | null;
+  admin?: boolean;
+  regularUserSeats?: number;
   defaultLanguage: string | null;
   subscriptionStartedAt: string | null;
   nextBillingAt: string | null;
   workspaceUsed: number;
   workspaceLimit: number | null;
   stripeSubscription: {
+    stripeCustomerId?: string | null;
+    stripeSubscriptionId?: string | null;
     subscriptionActive: boolean;
+    workspaceLimit?: number | null;
+    offerType?: OfferType | null;
+    admin?: boolean;
+    regularUserSeats?: number;
   } | null;
   handledWorkspaces: SlackWorkspaceVM[] | null;
   createdAt: string | null;
@@ -24,7 +34,7 @@ type SlackUserVM = {
 type SlackWorkspaceVM = {
   code: string;
   name: string;
-  link: string;
+  link: string | null;
 };
 
 type LanguageOption = {
@@ -92,7 +102,7 @@ const formatDateTime = (value: string | null) => {
   }).format(date);
 };
 
-const normalizeWorkspaceLink = (link: string) => {
+const normalizeWorkspaceLink = (link: string | null) => {
   if (!link) {
     return "";
   }
@@ -105,7 +115,7 @@ const normalizeWorkspaceLink = (link: string) => {
 };
 
 export default function AdminPage() {
-  const [activeTab, setActiveTab] = useState<"general" | "payments">(
+  const [activeTab, setActiveTab] = useState<"general" | "payments" | "business">(
     "general"
   );
   const [user, setUser] = useState<SlackUserVM | null>(null);
@@ -219,6 +229,12 @@ export default function AdminPage() {
     (user?.workspaceLimit ?? 0) > 0 &&
     user !== null &&
     user.workspaceUsed <= (user.workspaceLimit ?? 0);
+  const currentOfferType =
+    user?.stripeSubscription?.offerType ?? user?.offerType ?? null;
+  const currentAdmin = user?.stripeSubscription?.admin ?? user?.admin ?? false;
+  const currentRegularUserSeats =
+    user?.stripeSubscription?.regularUserSeats ?? user?.regularUserSeats ?? 0;
+  const isBusinessOffer = currentOfferType === "BUSINESS";
 
   const profileDetails = useMemo(() => {
     if (!user) {
@@ -226,11 +242,23 @@ export default function AdminPage() {
     }
     return [
       { label: "Email", value: user.email },
+      { label: "Offer type", value: currentOfferType },
       { label: "Workspace used", value: user.workspaceUsed },
       { label: "Workspace limit", value: user.workspaceLimit },
       { label: "Created at", value: formatDateTime(user.createdAt) },
     ];
-  }, [user]);
+  }, [currentOfferType, user]);
+
+  const businessDetails = useMemo(() => {
+    if (!user || currentOfferType !== "BUSINESS") {
+      return [];
+    }
+
+    return [
+      { label: "Admin", value: currentAdmin ? "Yes" : "No" },
+      { label: "Regular user seats", value: currentRegularUserSeats },
+    ];
+  }, [currentAdmin, currentOfferType, currentRegularUserSeats, user]);
 
   const billingDetails = useMemo(() => {
     if (!user) {
@@ -252,6 +280,12 @@ export default function AdminPage() {
       },
     ];
   }, [subscriptionActive, user]);
+
+  useEffect(() => {
+    if (!isBusinessOffer && activeTab === "business") {
+      setActiveTab("general");
+    }
+  }, [activeTab, isBusinessOffer]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -448,6 +482,18 @@ export default function AdminPage() {
             }`}>
             Payments
           </button>
+          {isBusinessOffer ? (
+            <button
+              type="button"
+              onClick={() => setActiveTab("business")}
+              className={`rounded-full border px-5 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300 ${
+                activeTab === "business"
+                  ? "border-indigo-400 bg-indigo-500 text-white shadow-lg shadow-indigo-500/30"
+                  : "border-white/20 bg-white/5 text-white/70 hover:bg-white/10"
+              }`}>
+              Business
+            </button>
+          ) : null}
         </section>
 
         <section className="space-y-4">
@@ -468,16 +514,24 @@ export default function AdminPage() {
           }`}>
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
             <h2 className="text-lg font-semibold text-white">
-              {activeTab === "general" ? "Profile overview" : "Payment details"}
+              {activeTab === "general"
+                ? "Profile overview"
+                : activeTab === "payments"
+                ? "Payment details"
+                : "Business details"}
             </h2>
             {activeTab === "general" ? (
               <p className="mt-2 text-sm text-white/60">
                 All fields are read-only except handled emails and default
                 language.
               </p>
-            ) : (
+            ) : activeTab === "payments" ? (
               <p className="mt-2 text-sm text-white/60">
                 Subscription and billing information for your account.
+              </p>
+            ) : (
+              <p className="mt-2 text-sm text-white/60">
+                Business-only account information.
               </p>
             )}
             {isLoading ? (
@@ -546,7 +600,7 @@ export default function AdminPage() {
                       </dl>
                     </div>
                   </>
-                ) : (
+                ) : activeTab === "payments" ? (
                   <div>
                     <h3 className="text-sm font-semibold text-white">
                       Payment details
@@ -566,6 +620,32 @@ export default function AdminPage() {
                       ))}
                     </dl>
                   </div>
+                ) : (
+                  <div>
+                    <h3 className="text-sm font-semibold text-white">
+                      Business details
+                    </h3>
+                    {businessDetails.length > 0 ? (
+                      <dl className="mt-3 space-y-4">
+                        {businessDetails.map((item) => (
+                          <div
+                            key={item.label}
+                            className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                            <dt className="text-xs uppercase tracking-wide text-white/60">
+                              {item.label}
+                            </dt>
+                            <dd className="text-white">
+                              {formatValue(item.value)}
+                            </dd>
+                          </div>
+                        ))}
+                      </dl>
+                    ) : (
+                      <div className="mt-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-sm text-white/60">
+                        No business details available.
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
             )}
@@ -573,7 +653,7 @@ export default function AdminPage() {
 
           <div
             className={`rounded-3xl border border-white/10 bg-white/5 p-6 ${
-              activeTab === "payments" ? "hidden" : ""
+              activeTab !== "general" ? "hidden" : ""
             }`}>
             <h2 className="text-lg font-semibold text-white">
               Editable settings
