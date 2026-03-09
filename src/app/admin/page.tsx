@@ -26,7 +26,11 @@ type SlackUserVM = {
     offerType?: OfferType | null;
     admin?: boolean;
     regularUserSeats?: number;
+    regularUserEmails?: string[];
+    availableRegularUserEmails?: string[];
   } | null;
+  regularUserEmails?: string[];
+  availableRegularUserEmails?: string[];
   handledWorkspaces: SlackWorkspaceVM[] | null;
   createdAt: string | null;
 };
@@ -114,6 +118,23 @@ const normalizeWorkspaceLink = (link: string | null) => {
   return `https://${link}`;
 };
 
+const normalizeEmailList = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return Array.from(
+    new Set(
+      value
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    )
+  );
+};
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<"general" | "payments" | "business">(
     "general"
@@ -132,6 +153,20 @@ export default function AdminPage() {
   const [passwordError, setPasswordError] = useState("");
   const [requiresAuth, setRequiresAuth] = useState(false);
   const [reauthNotice, setReauthNotice] = useState("");
+  const [availableBusinessEmails, setAvailableBusinessEmails] = useState<
+    string[]
+  >([]);
+  const [usedBusinessEmails, setUsedBusinessEmails] = useState<string[]>([]);
+  const [persistedUsedBusinessEmails, setPersistedUsedBusinessEmails] =
+    useState<string[]>([]);
+  const [selectedAvailableEmails, setSelectedAvailableEmails] = useState<
+    string[]
+  >([]);
+  const [selectedUsedEmails, setSelectedUsedEmails] = useState<string[]>([]);
+  const [availableEmailDraft, setAvailableEmailDraft] = useState("");
+  const [isSavingBusinessEmails, setIsSavingBusinessEmails] = useState(false);
+  const [businessNotice, setBusinessNotice] = useState("");
+  const [businessError, setBusinessError] = useState("");
   const slackClientId = process.env.NEXT_PUBLIC_SLACK_CLIENT_ID;
   const slackRedirectUri = process.env.NEXT_PUBLIC_SLACK_REDIRECT_URI;
   const slackOauthConfigured = Boolean(slackClientId && slackRedirectUri);
@@ -222,6 +257,33 @@ export default function AdminPage() {
       return;
     }
     setDefaultLanguage(user.defaultLanguage ?? "");
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) {
+      setAvailableBusinessEmails([]);
+      setUsedBusinessEmails([]);
+      setSelectedAvailableEmails([]);
+      setSelectedUsedEmails([]);
+      return;
+    }
+
+    const used = normalizeEmailList(
+      user.stripeSubscription?.regularUserEmails ?? user.regularUserEmails
+    );
+    const available = normalizeEmailList(
+      user.stripeSubscription?.availableRegularUserEmails ??
+        user.availableRegularUserEmails
+    ).filter((email) => !used.includes(email));
+
+    setUsedBusinessEmails(used);
+    setPersistedUsedBusinessEmails(used);
+    setAvailableBusinessEmails(available);
+    setSelectedAvailableEmails([]);
+    setSelectedUsedEmails([]);
+    setAvailableEmailDraft("");
+    setBusinessNotice("");
+    setBusinessError("");
   }, [user]);
 
   const canAddToSlack =
@@ -367,6 +429,146 @@ export default function AdminPage() {
       );
     } finally {
       setIsSavingPassword(false);
+    }
+  };
+
+  const moveEmailsToUsed = () => {
+    if (selectedAvailableEmails.length === 0) {
+      return;
+    }
+
+    setUsedBusinessEmails((prev) =>
+      Array.from(new Set([...prev, ...selectedAvailableEmails]))
+    );
+    setAvailableBusinessEmails((prev) =>
+      prev.filter((email) => !selectedAvailableEmails.includes(email))
+    );
+    setSelectedAvailableEmails([]);
+  };
+
+  const handleAddAvailableEmails = () => {
+    const parsedEmails = Array.from(
+      new Set(
+        availableEmailDraft
+          .split(/\r?\n/)
+          .map((item) => item.trim())
+          .filter(Boolean)
+      )
+    );
+
+    if (parsedEmails.length === 0) {
+      setBusinessError("Enter at least one email.");
+      return;
+    }
+
+    const invalidEmails = parsedEmails.filter((email) => !emailRegex.test(email));
+    if (invalidEmails.length > 0) {
+      setBusinessError(`Invalid email format: ${invalidEmails.join(", ")}`);
+      return;
+    }
+
+    setBusinessError("");
+    setBusinessNotice("");
+    setUsedBusinessEmails((prev) =>
+      Array.from(new Set([...prev, ...parsedEmails]))
+    );
+    setAvailableBusinessEmails((prev) =>
+      prev.filter((email) => !parsedEmails.includes(email))
+    );
+    setBusinessNotice("Emails added to used list.");
+    setAvailableEmailDraft("");
+  };
+
+  const moveEmailsToAvailable = () => {
+    if (selectedUsedEmails.length === 0) {
+      return;
+    }
+
+    setAvailableBusinessEmails((prev) =>
+      Array.from(new Set([...prev, ...selectedUsedEmails]))
+    );
+    setUsedBusinessEmails((prev) =>
+      prev.filter((email) => !selectedUsedEmails.includes(email))
+    );
+    setSelectedUsedEmails([]);
+  };
+
+  const handleBusinessEmailsSubmit = async () => {
+    if (!user) {
+      return;
+    }
+
+    setIsSavingBusinessEmails(true);
+    setBusinessNotice("");
+    setBusinessError("");
+
+    try {
+      const addedEmails = usedBusinessEmails.filter(
+        (email) => !persistedUsedBusinessEmails.includes(email)
+      );
+      const removedEmails = persistedUsedBusinessEmails.filter(
+        (email) => !usedBusinessEmails.includes(email)
+      );
+
+      if (addedEmails.length === 0 && removedEmails.length === 0) {
+        setBusinessNotice("No changes to save.");
+        return;
+      }
+
+      for (const email of addedEmails) {
+        const response = await fetch(buildBackendUrl("/users/me/business-users"), {
+          method: "POST",
+          headers: buildAuthHeaders({
+            "Content-Type": "application/json",
+          }),
+          body: JSON.stringify({ email }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to add business user email: ${email}`);
+        }
+      }
+
+      for (const email of removedEmails) {
+        const response = await fetch(buildBackendUrl("/users/me/business-users"), {
+          method: "DELETE",
+          headers: buildAuthHeaders({
+            "Content-Type": "application/json",
+          }),
+          body: JSON.stringify({ email }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Unable to remove business user email: ${email}`);
+        }
+      }
+
+      setBusinessNotice("Business emails updated.");
+      setPersistedUsedBusinessEmails(usedBusinessEmails);
+      setUser((prev) => {
+        if (!prev) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          regularUserEmails: usedBusinessEmails,
+          stripeSubscription: prev.stripeSubscription
+            ? {
+                ...prev.stripeSubscription,
+                regularUserEmails: usedBusinessEmails,
+              }
+            : prev.stripeSubscription,
+        };
+      });
+    } catch (saveError) {
+      setBusinessError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Unable to update business emails."
+      );
+    } finally {
+      setIsSavingBusinessEmails(false);
     }
   };
 
@@ -645,6 +847,121 @@ export default function AdminPage() {
                         No business details available.
                       </div>
                     )}
+                    <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                      <h4 className="text-sm font-semibold text-white">
+                        Business user emails
+                      </h4>
+                      <p className="mt-1 text-xs text-white/60">
+                        Assign emails with arrows like Salesforce dual listbox.
+                        Left side is remove list, right side is used list.
+                      </p>
+
+                      <div className="mt-4">
+                        <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-white/60">
+                          Add available emails (one per line)
+                        </label>
+                        <textarea
+                          value={availableEmailDraft}
+                          onChange={(event) => setAvailableEmailDraft(event.target.value)}
+                          rows={4}
+                          placeholder={"user1@example.com\nuser2@example.com"}
+                          className="w-full rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-sm text-white placeholder:text-white/40 focus:border-indigo-400 focus:outline-none"
+                        />
+                        <div className="mt-3">
+                          <button
+                            type="button"
+                            onClick={handleAddAvailableEmails}
+                            className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white transition hover:bg-white/20">
+                            Add to used
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
+                        <div>
+                          <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-white/60">
+                            Remove emails
+                          </label>
+                          <select
+                            multiple
+                            value={selectedAvailableEmails}
+                            onChange={(event) =>
+                              setSelectedAvailableEmails(
+                                Array.from(event.target.selectedOptions).map(
+                                  (option) => option.value
+                                )
+                              )
+                            }
+                            className="h-56 w-full rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-sm text-white focus:border-indigo-400 focus:outline-none">
+                            {availableBusinessEmails.map((email) => (
+                              <option key={`available-${email}`} value={email}>
+                                {email}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="flex flex-row justify-center gap-2 lg:flex-col">
+                          <button
+                            type="button"
+                            onClick={moveEmailsToUsed}
+                            disabled={selectedAvailableEmails.length === 0}
+                            className="rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50">
+                            &gt;
+                          </button>
+                          <button
+                            type="button"
+                            onClick={moveEmailsToAvailable}
+                            disabled={selectedUsedEmails.length === 0}
+                            className="rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50">
+                            &lt;
+                          </button>
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-white/60">
+                            Used emails
+                          </label>
+                          <select
+                            multiple
+                            value={selectedUsedEmails}
+                            onChange={(event) =>
+                              setSelectedUsedEmails(
+                                Array.from(event.target.selectedOptions).map(
+                                  (option) => option.value
+                                )
+                              )
+                            }
+                            className="h-56 w-full rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-sm text-white focus:border-indigo-400 focus:outline-none">
+                            {usedBusinessEmails.map((email) => (
+                              <option key={`used-${email}`} value={email}>
+                                {email}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={handleBusinessEmailsSubmit}
+                          disabled={isSavingBusinessEmails}
+                          className="rounded-full bg-indigo-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-60">
+                          {isSavingBusinessEmails ? "Submitting..." : "Submit"}
+                        </button>
+                        {businessNotice ? (
+                          <span className="text-xs font-medium text-emerald-200">
+                            {businessNotice}
+                          </span>
+                        ) : null}
+                      </div>
+                      {businessError ? (
+                        <div className="mt-3 rounded-2xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-xs text-rose-100">
+                          {businessError}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
                 )}
               </div>
