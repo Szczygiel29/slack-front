@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
-import { buildBackendUrl } from "../../lib/backend";
 type Mode = "login" | "register";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -95,15 +94,14 @@ export default function AuthPage() {
       setNotice(null);
       setIsSubmitting(true);
       try {
-        const endpoint = buildBackendUrl(
-          mode === "register" ? "/auth/register" : "/auth/login"
-        );
+        const endpoint =
+          mode === "register" ? "/api/auth/register" : "/api/auth/login";
         const response = await fetch(endpoint, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          credentials: "include",
+          credentials: "same-origin",
           body: JSON.stringify({
             email: values.email.trim(),
             password: values.password,
@@ -132,12 +130,6 @@ export default function AuthPage() {
             message: data?.message ?? "Activation email sent.",
           });
         } else {
-          if (data?.accessToken) {
-            localStorage.setItem("accessToken", data.accessToken);
-            if (data?.tokenType) {
-              localStorage.setItem("tokenType", data.tokenType);
-            }
-          }
           setNotice({
             type: "success",
             message: "Signed in successfully.",
@@ -213,13 +205,13 @@ export default function AuthPage() {
         </section>
 
         <section className="w-full max-w-lg rounded-3xl border border-white/10 bg-white/5 p-8">
-          <form className="space-y-5" onSubmit={handleSubmit} autoComplete="off">
+          <form className="space-y-5" onSubmit={handleSubmit}>
             <div>
               <label className="text-sm font-medium text-white">Email</label>
               <input
                 type="email"
                 name="email"
-                autoComplete="off"
+                autoComplete="email"
                 value={values.email}
                 onChange={(event) => handleChange("email", event.target.value)}
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-indigo-400 focus:outline-none"
@@ -234,7 +226,7 @@ export default function AuthPage() {
               <input
                 type="password"
                 name="password"
-                autoComplete="off"
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
                 value={values.password}
                 onChange={(event) => handleChange("password", event.target.value)}
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-indigo-400 focus:outline-none"
@@ -252,7 +244,7 @@ export default function AuthPage() {
                 <input
                   type="password"
                   name="confirmPassword"
-                  autoComplete="off"
+                  autoComplete="new-password"
                   value={values.confirmPassword}
                   onChange={(event) =>
                     handleChange("confirmPassword", event.target.value)

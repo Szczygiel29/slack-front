@@ -1,25 +1,35 @@
-export const getAccessToken = () => {
-  if (typeof window === "undefined") {
+import { CSRF_COOKIE, CSRF_HEADER } from "./session-constants";
+
+const getCookieValue = (name: string) => {
+  if (typeof document === "undefined") {
     return null;
   }
-  return window.localStorage.getItem("accessToken");
+
+  const target = `${name}=`;
+  const cookie = document.cookie
+    .split(";")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith(target));
+
+  return cookie ? decodeURIComponent(cookie.slice(target.length)) : null;
 };
 
-export const getTokenType = () => {
-  if (typeof window === "undefined") {
-    return null;
-  }
-  return window.localStorage.getItem("tokenType");
-};
-
-export const buildAuthHeaders = (headers: HeadersInit = {}) => {
-  const accessToken = getAccessToken();
-  if (!accessToken) {
+export const buildCsrfHeaders = (
+  method: string | undefined,
+  headers: HeadersInit = {}
+) => {
+  const normalizedMethod = (method ?? "GET").toUpperCase();
+  if (["GET", "HEAD", "OPTIONS"].includes(normalizedMethod)) {
     return headers;
   }
-  const tokenType = getTokenType() ?? "Bearer";
+
+  const csrfToken = getCookieValue(CSRF_COOKIE);
+  if (!csrfToken) {
+    return headers;
+  }
+
   return {
     ...headers,
-    Authorization: `${tokenType} ${accessToken}`,
+    [CSRF_HEADER]: csrfToken,
   };
 };

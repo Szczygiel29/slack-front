@@ -1,10 +1,10 @@
 ﻿"use client";
 
+import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
-import { buildBackendUrl } from "../../lib/backend";
-import { buildAuthHeaders } from "../../lib/auth";
+import { apiFetch } from "../../lib/api";
 import type { OfferType } from "../../types";
 
 type SlackUserVM = {
@@ -45,6 +45,8 @@ type LanguageOption = {
   value: string;
   label: string;
 };
+
+type NoticeTone = "success" | "error" | "warning" | "muted";
 
 const normalizeLanguages = (data: unknown): LanguageOption[] => {
   const rawItems: unknown[] = Array.isArray(data)
@@ -134,6 +136,128 @@ const normalizeEmailList = (value: unknown): string[] => {
 };
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const passwordStrengthRegex =
+  /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{12,}$/;
+
+const getSensitiveActionErrorMessage = (status: number, fallback: string) => {
+  if (status === 400) {
+    return "The request was rejected. Check the entered data and try again.";
+  }
+
+  if (status === 401 || status === 403) {
+    return "Your session could not be verified. Sign in again and retry.";
+  }
+
+  if (status >= 500) {
+    return "The server could not complete the operation. Try again later.";
+  }
+
+  return fallback;
+};
+
+const ui = {
+  page: "min-h-screen bg-slate-950 text-white",
+  header: "border-b border-white/10 bg-slate-950/80",
+  headerInner:
+    "mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4",
+  brandWrap: "flex items-center gap-3",
+  brandBadge:
+    "flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-500/90 text-sm font-semibold shadow-lg shadow-indigo-500/40",
+  brandText: "text-lg font-semibold tracking-tight",
+  ghostLink:
+    "text-sm font-medium text-white/70 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400",
+  shell: "mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 py-14",
+  card: "rounded-3xl border border-white/10 bg-white/5 p-6",
+  subCard: "rounded-2xl border border-white/10 bg-slate-950/60 p-4",
+  emptyCard:
+    "rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-sm text-white/60",
+  detailCard:
+    "flex flex-col gap-1 rounded-2xl border border-white/10 bg-slate-950/60 p-4",
+  input:
+    "mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-2 text-sm text-white placeholder:text-white/40 focus:border-indigo-400 focus:outline-none",
+  textarea:
+    "w-full rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-sm text-white placeholder:text-white/40 focus:border-indigo-400 focus:outline-none",
+  select:
+    "w-full appearance-none rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 pr-10 text-sm text-white focus:border-indigo-400 focus:outline-none",
+  multiSelect:
+    "h-56 w-full rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-sm text-white focus:border-indigo-400 focus:outline-none",
+  primaryButton:
+    "rounded-full bg-indigo-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300 disabled:cursor-not-allowed disabled:opacity-60",
+  primaryButtonWide:
+    "flex w-full items-center justify-center rounded-full bg-indigo-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300 disabled:cursor-not-allowed disabled:opacity-60",
+  secondaryButton:
+    "rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white transition hover:bg-white/20",
+  iconButton:
+    "rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50",
+  tabBase:
+    "rounded-full border px-5 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300",
+  tabActive:
+    "border-indigo-400 bg-indigo-500 text-white shadow-lg shadow-indigo-500/30",
+  tabIdle: "border-white/20 bg-white/5 text-white/70 hover:bg-white/10",
+};
+
+function Notice({
+  tone,
+  children,
+  className = "",
+}: {
+  tone: NoticeTone;
+  children: ReactNode;
+  className?: string;
+}) {
+  const toneClass =
+    tone === "success"
+      ? "border-emerald-400/40 bg-emerald-500/10 text-emerald-100"
+      : tone === "error"
+      ? "border-rose-400/40 bg-rose-500/10 text-rose-100"
+      : tone === "warning"
+      ? "border-amber-300/30 bg-amber-500/10 text-amber-100"
+      : "border-white/10 bg-slate-950/60 text-white/60";
+
+  return (
+    <div className={`rounded-2xl border px-4 py-3 text-xs ${toneClass} ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+function DetailList({
+  items,
+}: {
+  items: Array<{ label: string; value: string | number | null }>;
+}) {
+  return (
+    <dl className="mt-3 space-y-4">
+      {items.map((item) => (
+        <div key={item.label} className={ui.detailCard}>
+          <dt className="text-xs uppercase tracking-wide text-white/60">
+            {item.label}
+          </dt>
+          <dd className="text-white">{formatValue(item.value)}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function TabButton({
+  isActive,
+  onClick,
+  children,
+}: {
+  isActive: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`${ui.tabBase} ${isActive ? ui.tabActive : ui.tabIdle}`}>
+      {children}
+    </button>
+  );
+}
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<"general" | "payments" | "business">(
@@ -142,6 +266,7 @@ export default function AdminPage() {
   const [user, setUser] = useState<SlackUserVM | null>(null);
   const [languages, setLanguages] = useState<LanguageOption[]>([]);
   const [defaultLanguage, setDefaultLanguage] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -168,23 +293,7 @@ export default function AdminPage() {
   const [businessNotice, setBusinessNotice] = useState("");
   const [businessError, setBusinessError] = useState("");
   const slackClientId = process.env.NEXT_PUBLIC_SLACK_CLIENT_ID;
-  const slackRedirectUri = process.env.NEXT_PUBLIC_SLACK_REDIRECT_URI;
-  const slackOauthConfigured = Boolean(slackClientId && slackRedirectUri);
-
-  const slackOauthUrl = useMemo(() => {
-    const userEmail = user?.email ?? "";
-    if (!slackClientId || !slackRedirectUri) {
-      return "";
-    }
-
-    const url = new URL("https://slack.com/oauth/v2/authorize");
-    url.searchParams.set("client_id", slackClientId);
-    url.searchParams.set("scope", "chat:write,commands");
-    url.searchParams.set("redirect_uri", slackRedirectUri);
-    url.searchParams.set("state", userEmail);
-
-    return url.toString();
-  }, [slackClientId, slackRedirectUri, user?.email]);
+  const slackOauthConfigured = Boolean(slackClientId);
 
   useEffect(() => {
     let isMounted = true;
@@ -193,9 +302,7 @@ export default function AdminPage() {
       setError("");
       setRequiresAuth(false);
       try {
-        const userResponse = await fetch(buildBackendUrl("/users/me"), {
-          headers: buildAuthHeaders(),
-        });
+        const userResponse = await apiFetch("/users/me");
 
         if (userResponse.status === 401 || userResponse.status === 403) {
           if (isMounted) {
@@ -209,12 +316,7 @@ export default function AdminPage() {
         }
 
         const userData = (await userResponse.json()) as SlackUserVM;
-        const languageResponse = await fetch(
-          buildBackendUrl("/translate/languages"),
-          {
-            headers: buildAuthHeaders(),
-          }
-        );
+        const languageResponse = await apiFetch("/translate/languages");
 
         if (!languageResponse.ok) {
           throw new Error("Unable to load language options.");
@@ -358,11 +460,11 @@ export default function AdminPage() {
         defaultLanguage,
       };
 
-      const response = await fetch(buildBackendUrl("/users/me"), {
+      const response = await apiFetch("/users/me", {
         method: "PUT",
-        headers: buildAuthHeaders({
+        headers: {
           "Content-Type": "application/json",
-        }),
+        },
         body: JSON.stringify(payload),
       });
 
@@ -387,8 +489,28 @@ export default function AdminPage() {
     setPasswordNotice("");
     setPasswordError("");
 
+    if (!currentPassword) {
+      setPasswordError("Enter your current password to confirm this change.");
+      setIsSavingPassword(false);
+      return;
+    }
+
     if (!password) {
       setPasswordError("Enter a new password.");
+      setIsSavingPassword(false);
+      return;
+    }
+
+    if (currentPassword === password) {
+      setPasswordError("The new password must be different from the current password.");
+      setIsSavingPassword(false);
+      return;
+    }
+
+    if (!passwordStrengthRegex.test(password)) {
+      setPasswordError(
+        "Use at least 12 characters, including uppercase, lowercase and a number."
+      );
       setIsSavingPassword(false);
       return;
     }
@@ -400,25 +522,31 @@ export default function AdminPage() {
     }
 
     try {
-      const response = await fetch(buildBackendUrl("/users/me"), {
+      const response = await apiFetch("/users/me", {
         method: "PUT",
-        headers: buildAuthHeaders({
+        headers: {
           "Content-Type": "application/json",
-        }),
-        body: JSON.stringify({ password }),
+        },
+        body: JSON.stringify({ currentPassword, password }),
       });
 
       if (!response.ok) {
-        throw new Error("Unable to update password.");
+        throw new Error(
+          getSensitiveActionErrorMessage(
+            response.status,
+            "Unable to update password."
+          )
+        );
       }
 
+      setCurrentPassword("");
       setPassword("");
       setConfirmPassword("");
       setPasswordNotice("Password updated. Please sign in again.");
-      if (typeof window !== "undefined") {
-        window.localStorage.removeItem("accessToken");
-        window.localStorage.removeItem("tokenType");
-      }
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "same-origin",
+      });
       setReauthNotice("Password updated. Please sign in again.");
       setRequiresAuth(true);
     } catch (saveError) {
@@ -515,31 +643,55 @@ export default function AdminPage() {
         return;
       }
 
+      const summaryParts = [
+        addedEmails.length > 0 ? `${addedEmails.length} add` : null,
+        removedEmails.length > 0 ? `${removedEmails.length} remove` : null,
+      ].filter(Boolean);
+
+      if (
+        typeof window !== "undefined" &&
+        !window.confirm(
+          `Confirm business email update: ${summaryParts.join(", ")}.`
+        )
+      ) {
+        return;
+      }
+
       for (const email of addedEmails) {
-        const response = await fetch(buildBackendUrl("/users/me/business-users"), {
+        const response = await apiFetch("/users/me/business-users", {
           method: "POST",
-          headers: buildAuthHeaders({
+          headers: {
             "Content-Type": "application/json",
-          }),
+          },
           body: JSON.stringify({ email }),
         });
 
         if (!response.ok) {
-          throw new Error(`Unable to add business user email: ${email}`);
+          throw new Error(
+            getSensitiveActionErrorMessage(
+              response.status,
+              `Unable to add business user email: ${email}`
+            )
+          );
         }
       }
 
       for (const email of removedEmails) {
-        const response = await fetch(buildBackendUrl("/users/me/business-users"), {
+        const response = await apiFetch("/users/me/business-users", {
           method: "DELETE",
-          headers: buildAuthHeaders({
+          headers: {
             "Content-Type": "application/json",
-          }),
+          },
           body: JSON.stringify({ email }),
         });
 
         if (!response.ok) {
-          throw new Error(`Unable to remove business user email: ${email}`);
+          throw new Error(
+            getSensitiveActionErrorMessage(
+              response.status,
+              `Unable to remove business user email: ${email}`
+            )
+          );
         }
       }
 
@@ -574,26 +726,22 @@ export default function AdminPage() {
 
   if (requiresAuth) {
     return (
-      <div className="min-h-screen bg-slate-950 text-white">
-        <header className="border-b border-white/10 bg-slate-950/80">
-          <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-500/90 text-sm font-semibold shadow-lg shadow-indigo-500/40">
-                S
-              </div>
-              <span className="text-lg font-semibold tracking-tight">
-                Slackmate
-              </span>
+      <div className={ui.page}>
+        <header className={ui.header}>
+          <div className={ui.headerInner}>
+            <div className={ui.brandWrap}>
+              <div className={ui.brandBadge}>S</div>
+              <span className={ui.brandText}>Slackmate</span>
             </div>
             <Link
               href="/"
-              className="text-sm font-medium text-white/70 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400">
+              className={ui.ghostLink}>
               Back to home
             </Link>
           </div>
         </header>
         <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 px-6 py-16">
-          <section className="rounded-3xl border border-white/10 bg-white/5 p-8 text-center">
+          <section className={`${ui.card} p-8 text-center`}>
             <h1 className="text-2xl font-semibold text-white">
               Admin access requires sign in
             </h1>
@@ -607,7 +755,7 @@ export default function AdminPage() {
             ) : null}
             <Link
               href="/auth?mode=login"
-              className="mt-6 inline-flex items-center justify-center rounded-full bg-indigo-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300">
+              className={`mt-6 inline-flex items-center justify-center ${ui.primaryButton}`}>
               Go to sign in
             </Link>
           </section>
@@ -617,26 +765,21 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
-      <header className="border-b border-white/10 bg-slate-950/80">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-500/90 text-sm font-semibold shadow-lg shadow-indigo-500/40">
-              S
-            </div>
-            <span className="text-lg font-semibold tracking-tight">
-              Slackmate
-            </span>
+    <div className={ui.page}>
+      <header className={ui.header}>
+        <div className={ui.headerInner}>
+          <div className={ui.brandWrap}>
+            <div className={ui.brandBadge}>S</div>
+            <span className={ui.brandText}>Slackmate</span>
           </div>
-          <Link
-            href="/"
-            className="text-sm font-medium text-white/70 transition hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400">
+          <Link href="/" className={ui.ghostLink}>
             Back to home
           </Link>
         </div>
       </header>
 
-      <main className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 py-14">        {user ? (
+      <main className={ui.shell}>
+        {user ? (
           <section className="space-y-3">
             {!user.stripeSubscription ? (
               <Link
@@ -664,37 +807,22 @@ export default function AdminPage() {
           </section>
         ) : null}
         <section className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setActiveTab("general")}
-            className={`rounded-full border px-5 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300 ${
-              activeTab === "general"
-                ? "border-indigo-400 bg-indigo-500 text-white shadow-lg shadow-indigo-500/30"
-                : "border-white/20 bg-white/5 text-white/70 hover:bg-white/10"
-            }`}>
+          <TabButton
+            isActive={activeTab === "general"}
+            onClick={() => setActiveTab("general")}>
             General information
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("payments")}
-            className={`rounded-full border px-5 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300 ${
-              activeTab === "payments"
-                ? "border-indigo-400 bg-indigo-500 text-white shadow-lg shadow-indigo-500/30"
-                : "border-white/20 bg-white/5 text-white/70 hover:bg-white/10"
-            }`}>
+          </TabButton>
+          <TabButton
+            isActive={activeTab === "payments"}
+            onClick={() => setActiveTab("payments")}>
             Payments
-          </button>
+          </TabButton>
           {isBusinessOffer ? (
-            <button
-              type="button"
-              onClick={() => setActiveTab("business")}
-              className={`rounded-full border px-5 py-2 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300 ${
-                activeTab === "business"
-                  ? "border-indigo-400 bg-indigo-500 text-white shadow-lg shadow-indigo-500/30"
-                  : "border-white/20 bg-white/5 text-white/70 hover:bg-white/10"
-              }`}>
+            <TabButton
+              isActive={activeTab === "business"}
+              onClick={() => setActiveTab("business")}>
               Business
-            </button>
+            </TabButton>
           ) : null}
         </section>
 
@@ -714,7 +842,7 @@ export default function AdminPage() {
           className={`grid gap-8 ${
             activeTab === "general" ? "lg:grid-cols-[1.1fr_0.9fr]" : ""
           }`}>
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
+          <div className={ui.card}>
             <h2 className="text-lg font-semibold text-white">
               {activeTab === "general"
                 ? "Profile overview"
@@ -737,13 +865,13 @@ export default function AdminPage() {
               </p>
             )}
             {isLoading ? (
-              <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-sm text-white/60">
+              <div className={`mt-6 ${ui.emptyCard}`}>
                 Loading admin profile...
               </div>
             ) : error ? (
-              <div className="mt-6 rounded-2xl border border-rose-400/40 bg-rose-500/10 p-4 text-sm text-rose-100">
+              <Notice tone="error" className="mt-6 p-4 text-sm">
                 {error}
-              </div>
+              </Notice>
             ) : (
               <div className="mt-6 space-y-6 text-sm">
                 {activeTab === "general" ? (
@@ -786,20 +914,7 @@ export default function AdminPage() {
                       <h3 className="text-sm font-semibold text-white">
                         Account details
                       </h3>
-                      <dl className="mt-3 space-y-4">
-                        {profileDetails.map((item) => (
-                          <div
-                            key={item.label}
-                            className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                            <dt className="text-xs uppercase tracking-wide text-white/60">
-                              {item.label}
-                            </dt>
-                            <dd className="text-white">
-                              {formatValue(item.value)}
-                            </dd>
-                          </div>
-                        ))}
-                      </dl>
+                      <DetailList items={profileDetails} />
                     </div>
                   </>
                 ) : activeTab === "payments" ? (
@@ -807,20 +922,7 @@ export default function AdminPage() {
                     <h3 className="text-sm font-semibold text-white">
                       Payment details
                     </h3>
-                    <dl className="mt-3 space-y-4">
-                      {billingDetails.map((item) => (
-                        <div
-                          key={item.label}
-                          className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                          <dt className="text-xs uppercase tracking-wide text-white/60">
-                            {item.label}
-                          </dt>
-                          <dd className="text-white">
-                            {formatValue(item.value)}
-                          </dd>
-                        </div>
-                      ))}
-                    </dl>
+                    <DetailList items={billingDetails} />
                   </div>
                 ) : (
                   <div>
@@ -828,26 +930,13 @@ export default function AdminPage() {
                       Business details
                     </h3>
                     {businessDetails.length > 0 ? (
-                      <dl className="mt-3 space-y-4">
-                        {businessDetails.map((item) => (
-                          <div
-                            key={item.label}
-                            className="flex flex-col gap-1 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                            <dt className="text-xs uppercase tracking-wide text-white/60">
-                              {item.label}
-                            </dt>
-                            <dd className="text-white">
-                              {formatValue(item.value)}
-                            </dd>
-                          </div>
-                        ))}
-                      </dl>
+                      <DetailList items={businessDetails} />
                     ) : (
-                      <div className="mt-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-sm text-white/60">
+                      <div className={`mt-3 ${ui.emptyCard}`}>
                         No business details available.
                       </div>
                     )}
-                    <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                    <div className={`mt-6 ${ui.subCard}`}>
                       <h4 className="text-sm font-semibold text-white">
                         Business user emails
                       </h4>
@@ -865,13 +954,13 @@ export default function AdminPage() {
                           onChange={(event) => setAvailableEmailDraft(event.target.value)}
                           rows={4}
                           placeholder={"user1@example.com\nuser2@example.com"}
-                          className="w-full rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-sm text-white placeholder:text-white/40 focus:border-indigo-400 focus:outline-none"
+                          className={ui.textarea}
                         />
                         <div className="mt-3">
                           <button
                             type="button"
                             onClick={handleAddAvailableEmails}
-                            className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white transition hover:bg-white/20">
+                            className={ui.secondaryButton}>
                             Add to used
                           </button>
                         </div>
@@ -892,7 +981,7 @@ export default function AdminPage() {
                                 )
                               )
                             }
-                            className="h-56 w-full rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-sm text-white focus:border-indigo-400 focus:outline-none">
+                            className={ui.multiSelect}>
                             {availableBusinessEmails.map((email) => (
                               <option key={`available-${email}`} value={email}>
                                 {email}
@@ -906,14 +995,14 @@ export default function AdminPage() {
                             type="button"
                             onClick={moveEmailsToUsed}
                             disabled={selectedAvailableEmails.length === 0}
-                            className="rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50">
+                            className={ui.iconButton}>
                             &gt;
                           </button>
                           <button
                             type="button"
                             onClick={moveEmailsToAvailable}
                             disabled={selectedUsedEmails.length === 0}
-                            className="rounded-xl border border-white/20 bg-white/10 px-3 py-2 text-sm font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-50">
+                            className={ui.iconButton}>
                             &lt;
                           </button>
                         </div>
@@ -932,7 +1021,7 @@ export default function AdminPage() {
                                 )
                               )
                             }
-                            className="h-56 w-full rounded-2xl border border-white/10 bg-slate-900/80 p-3 text-sm text-white focus:border-indigo-400 focus:outline-none">
+                            className={ui.multiSelect}>
                             {usedBusinessEmails.map((email) => (
                               <option key={`used-${email}`} value={email}>
                                 {email}
@@ -947,7 +1036,7 @@ export default function AdminPage() {
                           type="button"
                           onClick={handleBusinessEmailsSubmit}
                           disabled={isSavingBusinessEmails}
-                          className="rounded-full bg-indigo-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-60">
+                          className={ui.primaryButton}>
                           {isSavingBusinessEmails ? "Submitting..." : "Submit"}
                         </button>
                         {businessNotice ? (
@@ -957,9 +1046,9 @@ export default function AdminPage() {
                         ) : null}
                       </div>
                       {businessError ? (
-                        <div className="mt-3 rounded-2xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-xs text-rose-100">
+                        <Notice tone="error" className="mt-3">
                           {businessError}
-                        </div>
+                        </Notice>
                       ) : null}
                     </div>
                   </div>
@@ -969,7 +1058,7 @@ export default function AdminPage() {
           </div>
 
           <div
-            className={`rounded-3xl border border-white/10 bg-white/5 p-6 ${
+            className={`${ui.card} ${
               activeTab !== "general" ? "hidden" : ""
             }`}>
             <h2 className="text-lg font-semibold text-white">
@@ -980,7 +1069,7 @@ export default function AdminPage() {
                 <label className="text-sm font-medium text-white">
                   Workspace usage
                 </label>
-                <div className="mt-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                <div className={`mt-3 ${ui.subCard}`}>
                   <div className="flex items-center justify-between gap-3 text-sm">
                     <span className="text-white/70">Used workspaces</span>
                     <span className="font-semibold text-white">
@@ -990,8 +1079,8 @@ export default function AdminPage() {
                   </div>
                   {canAddToSlack ? (
                     <a
-                      href={slackOauthUrl}
-                      className="mt-4 flex w-full items-center justify-center rounded-full bg-indigo-500 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300">
+                      href="/api/slack/oauth/start"
+                      className={`mt-4 flex w-full items-center justify-center ${ui.primaryButton}`}>
                       Add to Slack
                     </a>
                   ) : (
@@ -1002,18 +1091,18 @@ export default function AdminPage() {
                         className="flex w-full cursor-not-allowed items-center justify-center rounded-full bg-slate-600/70 px-5 py-2 text-sm font-semibold text-slate-300">
                         Add to Slack
                       </button>
-                      <div className="flex items-center justify-between gap-3 rounded-2xl border border-amber-300/30 bg-amber-500/10 px-4 py-3 text-xs text-amber-100">
+                      <Notice tone="warning" className="flex items-center justify-between gap-3 text-xs">
                         <span>
                           {slackOauthConfigured
                             ? "Workspace limit reached."
-                            : "Slack OAuth is not configured (NEXT_PUBLIC_SLACK_CLIENT_ID / NEXT_PUBLIC_SLACK_REDIRECT_URI)."}
+                            : "Slack OAuth is not configured (NEXT_PUBLIC_SLACK_CLIENT_ID)."}
                         </span>
                         <Link
                           href="/offers"
                           className="rounded-full bg-amber-400 px-3 py-1 font-semibold text-amber-950 transition hover:bg-amber-300">
                           Add workspace
                         </Link>
-                      </div>
+                      </Notice>
                     </div>
                   )}
                 </div>
@@ -1029,7 +1118,7 @@ export default function AdminPage() {
                   <select
                     value={defaultLanguage}
                     onChange={(event) => setDefaultLanguage(event.target.value)}
-                    className="w-full appearance-none rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 pr-10 text-sm text-white focus:border-indigo-400 focus:outline-none">
+                    className={ui.select}>
                     <option value="">Select a language</option>
                     {languages.map((option) => (
                       <option key={option.value} value={option.value}>
@@ -1057,18 +1146,18 @@ export default function AdminPage() {
                 type="button"
                 onClick={handleSave}
                 disabled={isSaving || isLoading}
-                className="flex w-full items-center justify-center rounded-full bg-indigo-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300 disabled:cursor-not-allowed disabled:opacity-60">
+                className={ui.primaryButtonWide}>
                 {isSaving ? "Saving..." : "Save"}
               </button>
               {notice ? (
-                <div className="rounded-2xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-100">
+                <Notice tone="success">
                   {notice}
-                </div>
+                </Notice>
               ) : null}
               {error ? (
-                <div className="rounded-2xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-xs text-rose-100">
+                <Notice tone="error">
                   {error}
-                </div>
+                </Notice>
               ) : null}
               <div className="pt-4">
                 <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-4">
@@ -1076,10 +1165,24 @@ export default function AdminPage() {
                     Change password
                   </h3>
                   <p className="mt-1 text-xs text-white/60">
-                    Enter the new password twice. You will be asked to sign in
-                    again.
+                    Confirm with your current password. The new password must
+                    have at least 12 characters, including uppercase,
+                    lowercase and a number.
                   </p>
                   <div className="mt-4 space-y-3">
+                    <div>
+                      <label className="text-xs font-medium text-white/70">
+                        Current password
+                      </label>
+                      <input
+                        type="password"
+                        value={currentPassword}
+                        onChange={(event) => setCurrentPassword(event.target.value)}
+                        autoComplete="current-password"
+                        className={ui.input}
+                        placeholder="Enter your current password"
+                      />
+                    </div>
                     <div>
                       <label className="text-xs font-medium text-white/70">
                         New password
@@ -1088,7 +1191,8 @@ export default function AdminPage() {
                         type="password"
                         value={password}
                         onChange={(event) => setPassword(event.target.value)}
-                        className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-2 text-sm text-white placeholder:text-white/40 focus:border-indigo-400 focus:outline-none"
+                        autoComplete="new-password"
+                        className={ui.input}
                         placeholder="Enter a new password"
                       />
                     </div>
@@ -1102,7 +1206,8 @@ export default function AdminPage() {
                         onChange={(event) =>
                           setConfirmPassword(event.target.value)
                         }
-                        className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-2 text-sm text-white placeholder:text-white/40 focus:border-indigo-400 focus:outline-none"
+                        autoComplete="new-password"
+                        className={ui.input}
                         placeholder="Re-enter new password"
                       />
                     </div>
@@ -1115,14 +1220,14 @@ export default function AdminPage() {
                     {isSavingPassword ? "Updating..." : "Change password"}
                   </button>
                   {passwordNotice ? (
-                    <div className="mt-3 rounded-2xl border border-emerald-400/40 bg-emerald-500/10 px-4 py-3 text-xs text-emerald-100">
+                    <Notice tone="success" className="mt-3">
                       {passwordNotice}
-                    </div>
+                    </Notice>
                   ) : null}
                   {passwordError ? (
-                    <div className="mt-3 rounded-2xl border border-rose-400/40 bg-rose-500/10 px-4 py-3 text-xs text-rose-100">
+                    <Notice tone="error" className="mt-3">
                       {passwordError}
-                    </div>
+                    </Notice>
                   ) : null}
                 </div>
               </div>

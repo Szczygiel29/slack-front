@@ -1,33 +1,36 @@
-import { buildAuthHeaders } from "./auth";
-
-const DEFAULT_API_BASE_URL = "http://localhost:8080";
-
-const normalizeBaseUrl = (value: string) => value.replace(/\/+$/, "");
-
-export const getApiBaseUrl = () => {
-  const envUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-  return normalizeBaseUrl(envUrl ?? DEFAULT_API_BASE_URL);
-};
+import { buildCsrfHeaders } from "./auth";
 
 export const buildApiUrl = (path: string) => {
-  const baseUrl = getApiBaseUrl();
+  const baseUrl = "/api/proxy";
   if (path.startsWith("/")) {
     return `${baseUrl}${path}`;
   }
   return `${baseUrl}/${path}`;
 };
 
+export async function apiFetch(path: string, options: RequestInit = {}) {
+  const headers = buildCsrfHeaders(options.method, {
+    ...options.headers,
+  });
+
+  return fetch(buildApiUrl(path), {
+    credentials: "same-origin",
+    ...options,
+    headers,
+  });
+}
+
 export async function fetchJSON<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const headers = buildAuthHeaders({
+  const headers = buildCsrfHeaders(options.method, {
     "Content-Type": "application/json",
     ...options.headers,
   });
 
   const response = await fetch(buildApiUrl(path), {
-    credentials: "include",
+    credentials: "same-origin",
     ...options,
     headers,
   });

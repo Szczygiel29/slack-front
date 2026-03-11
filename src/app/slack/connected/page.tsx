@@ -4,38 +4,48 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
-import { buildAuthHeaders } from "../../../lib/auth";
-import { buildBackendUrl } from "../../../lib/backend";
+import { apiFetch } from "../../../lib/api";
 
 type AuthState = "loading" | "authenticated" | "unauthenticated";
+type SlackOauthErrorCode =
+  | "invalid_state"
+  | "backend_rejected"
+  | "backend_unavailable";
+
+const slackOauthMessages: Record<SlackOauthErrorCode, string> = {
+  invalid_state:
+    "Slack authorization could not be verified. Start the connection flow again.",
+  backend_rejected:
+    "Slack rejected or did not complete the connection request. Try again.",
+  backend_unavailable:
+    "Slack connection is temporarily unavailable. Try again in a moment.",
+};
 
 export default function SlackConnectedPage() {
   const searchParams = useSearchParams();
   const [authState, setAuthState] = useState<AuthState>("loading");
 
   const status = searchParams.get("status");
-  const messageFromQuery = searchParams.get("message");
+  const errorCode = searchParams.get("code") as SlackOauthErrorCode | null;
 
   const isError = status === "error";
 
   const message = useMemo(() => {
     if (isError) {
-      return (
-        messageFromQuery ??
-        "Slack connection was not completed. Please try again."
-      );
+      if (errorCode && errorCode in slackOauthMessages) {
+        return slackOauthMessages[errorCode];
+      }
+      return "Slack connection was not completed. Please try again.";
     }
     return "Your app has been successfully connected to Slack.";
-  }, [isError, messageFromQuery]);
+  }, [errorCode, isError]);
 
   useEffect(() => {
     let mounted = true;
 
     const verify = async () => {
       try {
-        const response = await fetch(buildBackendUrl("/users/me"), {
-          headers: buildAuthHeaders(),
-        });
+        const response = await apiFetch("/users/me");
 
         if (!mounted) {
           return;

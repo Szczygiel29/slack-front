@@ -1,6 +1,13 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 import { buildBackendUrl } from "../../../../../lib/backend";
+import { getSession } from "../../../../../lib/session";
+import { SLACK_OAUTH_STATE_COOKIE } from "../../../../../lib/session-constants";
+
+type SlackOauthErrorCode =
+  | "invalid_state"
+  | "backend_rejected"
+  | "backend_unavailable";
 
 const getFrontendOrigin = (request: NextRequest) => {
   if (process.env.NEXT_PUBLIC_APP_URL) {
@@ -12,6 +19,27 @@ const getFrontendOrigin = (request: NextRequest) => {
 export async function GET(request: NextRequest) {
   const incomingUrl = request.nextUrl;
   const frontendOrigin = getFrontendOrigin(request);
+  const session = await getSession();
+  const stateFromQuery = incomingUrl.searchParams.get("state");
+  const stateFromCookie = request.cookies.get(SLACK_OAUTH_STATE_COOKIE)?.value;
+
+  const buildErrorRedirect = (code: SlackOauthErrorCode) => {
+    const response = NextResponse.redirect(new URL("/slack/connected", frontendOrigin));
+    response.cookies.delete(SLACK_OAUTH_STATE_COOKIE);
+    response.headers.set(
+      "Location",
+      `${frontendOrigin}/slack/connected?status=error&code=${encodeURIComponent(code)}`
+    );
+    return response;
+  };
+
+  if (!session.accessToken) {
+    return NextResponse.redirect(new URL("/auth?mode=login", frontendOrigin));
+  }
+
+  if (!stateFromQuery || !stateFromCookie || stateFromQuery !== stateFromCookie) {
+    return buildErrorRedirect("invalid_state");
+  }
 
   const backendCallbackUrl = new URL(buildBackendUrl("/slack/oauth/callback"));
   incomingUrl.searchParams.forEach((value, key) => {
@@ -22,7 +50,7 @@ export async function GET(request: NextRequest) {
     const backendResponse = await fetch(backendCallbackUrl.toString(), {
       method: "GET",
       headers: {
-        cookie: request.headers.get("cookie") ?? "",
+        Authorization: `${session.tokenType} ${session.accessToken}`,
       },
       cache: "no-store",
     });
@@ -30,32 +58,13 @@ export async function GET(request: NextRequest) {
     const successRedirect = new URL("/slack/connected", frontendOrigin);
 
     if (backendResponse.ok) {
-      return NextResponse.redirect(successRedirect);
+      const response = NextResponse.redirect(successRedirect);
+      response.cookies.delete(SLACK_OAUTH_STATE_COOKIE);
+      return response;
     }
 
-    const errorRedirect = new URL("/slack/connected", frontendOrigin);
-    errorRedirect.searchParams.set("status", "error");
-
-    try {
-      const payload = (await backendResponse.json()) as { message?: string };
-      if (payload.message) {
-        errorRedirect.searchParams.set("message", payload.message);
-      }
-    } catch {
-      errorRedirect.searchParams.set(
-        "message",
-        "Failed to connect the app to Slack."
-      );
-    }
-
-    return NextResponse.redirect(errorRedirect);
+    return buildErrorRedirect("backend_rejected");
   } catch {
-    const errorRedirect = new URL("/slack/connected", frontendOrigin);
-    errorRedirect.searchParams.set("status", "error");
-    errorRedirect.searchParams.set(
-      "message",
-      "Server connection error during Slack authorization."
-    );
-    return NextResponse.redirect(errorRedirect);
+    return buildErrorRedirect("backend_unavailable");
   }
 }
