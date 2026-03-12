@@ -3,6 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import {
+  EMAIL_MAX_LENGTH,
+  PASSWORD_MAX_LENGTH,
+  hasControlChars,
+  isReasonableLength,
+  normalizeEmail,
+} from "../../lib/validation";
 
 type Mode = "login" | "register";
 
@@ -50,11 +57,16 @@ export default function AuthPage() {
     message: string;
   } | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resendEmail, setResendEmail] = useState("");
+  const [canResendVerification, setCanResendVerification] = useState(false);
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
 
   useEffect(() => {
     setMode(initialMode);
     setErrors({});
     setNotice(null);
+    setCanResendVerification(false);
+    setResendEmail("");
   }, [initialMode]);
 
   const handleChange = (field: keyof typeof initialValues, value: string) => {
@@ -63,14 +75,24 @@ export default function AuthPage() {
 
   const validate = () => {
     const nextErrors: Record<string, string> = {};
-    if (!values.email.trim()) {
+    const normalizedEmail = normalizeEmail(values.email);
+
+    if (!normalizedEmail) {
       nextErrors.email = "Email is required.";
-    } else if (!emailRegex.test(values.email)) {
+    } else if (!isReasonableLength(normalizedEmail, EMAIL_MAX_LENGTH)) {
+      nextErrors.email = "Email is too long.";
+    } else if (hasControlChars(normalizedEmail)) {
+      nextErrors.email = "Email contains invalid characters.";
+    } else if (!emailRegex.test(normalizedEmail)) {
       nextErrors.email = "Enter a valid email address.";
     }
 
     if (!values.password) {
       nextErrors.password = "Password is required.";
+    } else if (!isReasonableLength(values.password, PASSWORD_MAX_LENGTH)) {
+      nextErrors.password = "Password is too long.";
+    } else if (hasControlChars(values.password)) {
+      nextErrors.password = "Password contains invalid characters.";
     } else if (values.password.length < 8) {
       nextErrors.password = "Password must be at least 8 characters.";
     }
@@ -78,6 +100,11 @@ export default function AuthPage() {
     if (mode === "register") {
       if (!values.confirmPassword) {
         nextErrors.confirmPassword = "Confirm your password.";
+      } else if (!isReasonableLength(values.confirmPassword, PASSWORD_MAX_LENGTH)) {
+        nextErrors.confirmPassword = "Confirmation password is too long.";
+      } else if (hasControlChars(values.confirmPassword)) {
+        nextErrors.confirmPassword =
+          "Confirmation password contains invalid characters.";
       } else if (values.confirmPassword !== values.password) {
         nextErrors.confirmPassword = "Passwords do not match.";
       }
@@ -92,8 +119,10 @@ export default function AuthPage() {
     setErrors(nextErrors);
     if (Object.keys(nextErrors).length === 0) {
       setNotice(null);
+      setCanResendVerification(false);
       setIsSubmitting(true);
       try {
+        const normalizedEmail = normalizeEmail(values.email);
         const endpoint =
           mode === "register" ? "/api/auth/register" : "/api/auth/login";
         const response = await fetch(endpoint, {
@@ -103,7 +132,7 @@ export default function AuthPage() {
           },
           credentials: "same-origin",
           body: JSON.stringify({
-            email: values.email.trim(),
+            email: normalizedEmail,
             password: values.password,
           }),
         });
@@ -111,6 +140,28 @@ export default function AuthPage() {
         const data = await response.json().catch(() => null);
 
         if (!response.ok) {
+          if (response.status === 401 && mode === "login") {
+            setMode("register");
+            setValues(initialValues);
+            setErrors({});
+            setNotice({
+              type: "error",
+              message: "Account not found or invalid credentials. Create a new account.",
+            });
+            return;
+          }
+
+          if (response.status === 403) {
+            setResendEmail(normalizedEmail);
+            setCanResendVerification(true);
+            setNotice({
+              type: "error",
+              message:
+                "A verification email has already been sent to this email address. If you did not receive it, send it again.",
+            });
+            return;
+          }
+
           const message =
             data?.message ??
             (response.status === 409
@@ -125,11 +176,13 @@ export default function AuthPage() {
         }
 
         if (mode === "register") {
+          setCanResendVerification(false);
           setNotice({
             type: "success",
             message: data?.message ?? "Activation email sent.",
           });
         } else {
+          setCanResendVerification(false);
           setNotice({
             type: "success",
             message: "Signed in successfully.",
@@ -148,6 +201,48 @@ export default function AuthPage() {
     setMode(nextMode);
     setErrors({});
     setNotice(null);
+    setCanResendVerification(false);
+    setResendEmail("");
+  };
+
+  const handleResendVerificationEmail = async () => {
+    if (!resendEmail) {
+      return;
+    }
+
+    setIsResendingVerification(true);
+    try {
+      const response = await fetch("/api/auth/resend-verification-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({ email: resendEmail }),
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        setNotice({
+          type: "error",
+          message:
+            data?.message ??
+            "Unable to resend the verification email.",
+        });
+        return;
+      }
+
+      setCanResendVerification(false);
+      setNotice({
+        type: "success",
+        message:
+          data?.message ??
+          "The verification email has been sent again. Check your inbox.",
+      });
+    } finally {
+      setIsResendingVerification(false);
+    }
   };
 
   return (
@@ -212,6 +307,7 @@ export default function AuthPage() {
                 type="email"
                 name="email"
                 autoComplete="email"
+                maxLength={EMAIL_MAX_LENGTH}
                 value={values.email}
                 onChange={(event) => handleChange("email", event.target.value)}
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-indigo-400 focus:outline-none"
@@ -227,6 +323,7 @@ export default function AuthPage() {
                 type="password"
                 name="password"
                 autoComplete={mode === "login" ? "current-password" : "new-password"}
+                maxLength={PASSWORD_MAX_LENGTH}
                 value={values.password}
                 onChange={(event) => handleChange("password", event.target.value)}
                 className="mt-2 w-full rounded-2xl border border-white/10 bg-slate-950/60 px-4 py-3 text-sm text-white placeholder:text-white/40 focus:border-indigo-400 focus:outline-none"
@@ -245,6 +342,7 @@ export default function AuthPage() {
                   type="password"
                   name="confirmPassword"
                   autoComplete="new-password"
+                  maxLength={PASSWORD_MAX_LENGTH}
                   value={values.confirmPassword}
                   onChange={(event) =>
                     handleChange("confirmPassword", event.target.value)
@@ -276,6 +374,18 @@ export default function AuthPage() {
               >
                 {notice.message}
               </div>
+            ) : null}
+            {canResendVerification ? (
+              <button
+                type="button"
+                onClick={handleResendVerificationEmail}
+                disabled={isResendingVerification}
+                className="w-full rounded-full border border-white/20 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/40 hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isResendingVerification
+                  ? "Resending..."
+                  : "Resend verification email"}
+              </button>
             ) : null}
           </form>
           <button

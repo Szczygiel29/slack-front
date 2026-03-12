@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Elements } from "@stripe/react-stripe-js";
 
@@ -8,7 +9,7 @@ import CheckoutModal from "../../components/CheckoutModal";
 import StripeCheckoutForm from "../../components/StripeCheckoutForm";
 import { fetchOfferPlans, formatUsdPrice } from "../../lib/offers";
 import { stripePromise } from "../../lib/stripe";
-import { fetchJSON } from "../../lib/api";
+import { apiFetch } from "../../lib/api";
 import type {
   OfferPlanResponse,
   OfferType,
@@ -16,6 +17,7 @@ import type {
 } from "../../types";
 
 export default function OffersPage() {
+  const router = useRouter();
   const [offers, setOffers] = useState<OfferPlanResponse[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -64,14 +66,25 @@ export default function OffersPage() {
     setSetupError(null);
 
     try {
-      const response = await fetchJSON<SetupIntentResponse>(
-        "/stripe/setup-intent",
-        {
-          method: "POST",
-          body: JSON.stringify({ offerType }),
-        }
-      );
-      setClientSecret(response.clientSecret);
+      const response = await apiFetch("/stripe/setup-intent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ offerType }),
+      });
+
+      if (response.status === 401) {
+        router.push("/auth?mode=login");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Failed to create SetupIntent.");
+      }
+
+      const data = (await response.json()) as SetupIntentResponse;
+      setClientSecret(data.clientSecret);
       setIsModalOpen(true);
     } catch (setupIntentError) {
       setSetupError(

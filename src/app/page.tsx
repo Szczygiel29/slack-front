@@ -668,15 +668,15 @@ export default function Home() {
                       </ul>
                     </td>
                     <td className="px-6 py-5 align-top">
-                      <a
-                        href="#contact"
+                      <Link
+                        href="/auth?mode=login"
                         className={`inline-flex items-center justify-center rounded-full px-4 py-2 text-xs font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300 ${
                           plan.type === "BUSINESS"
                             ? "bg-indigo-500 text-white hover:bg-indigo-400"
                             : "border border-white/20 text-white/80 hover:border-white/40 hover:text-white"
                         }`}>
                         Choose plan
-                      </a>
+                      </Link>
                     </td>
                   </tr>
                   ))

@@ -5,6 +5,15 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import { apiFetch } from "../../lib/api";
+import {
+  EMAIL_LIST_ITEM_MAX_LENGTH,
+  EMAIL_LIST_TEXT_MAX_LENGTH,
+  LANGUAGE_MAX_LENGTH,
+  PASSWORD_MAX_LENGTH,
+  hasControlChars,
+  isReasonableLength,
+  normalizeEmail,
+} from "../../lib/validation";
 import type { OfferType } from "../../types";
 
 type SlackUserVM = {
@@ -40,6 +49,24 @@ type SlackWorkspaceVM = {
   name: string;
   link: string | null;
 };
+
+type StripeSubscriptionVM = {
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  subscriptionActive: boolean;
+  workspaceLimit: number;
+  offerType: OfferType;
+  admin: boolean;
+  regularUserSeats: number;
+  regularUserEmails: string[];
+};
+
+type AccountDeletionVM = {
+  activeSubscription: boolean;
+  deletedUser: boolean;
+};
+
+type DangerAction = "cancel-subscription" | "delete-account";
 
 type LanguageOption = {
   value: string;
@@ -259,6 +286,67 @@ function TabButton({
   );
 }
 
+function DangerConfirmModal({
+  isOpen,
+  title,
+  description,
+  confirmLabel,
+  isProcessing,
+  onCancel,
+  onConfirm,
+}: {
+  isOpen: boolean;
+  title: string;
+  description: string;
+  confirmLabel: string;
+  isProcessing?: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  if (!isOpen) {
+    return null;
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-6 backdrop-blur-sm">
+      <div className="w-full max-w-md rounded-3xl border border-rose-400/30 bg-slate-900 p-6 shadow-2xl shadow-black/40">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-rose-300">
+              Danger zone
+            </p>
+            <h2 className="mt-2 text-xl font-semibold text-white">{title}</h2>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isProcessing}
+            className="rounded-full border border-white/10 px-3 py-1 text-xs font-medium text-white/70 transition hover:border-white/20 hover:text-white disabled:cursor-not-allowed disabled:opacity-60">
+            Close
+          </button>
+        </div>
+        <p className="mt-4 text-sm leading-6 text-white/70">{description}</p>
+        <div className="mt-6 flex flex-wrap justify-end gap-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={isProcessing}
+            className="rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white/80 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-60">
+            Keep account
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={isProcessing}
+            className="rounded-full bg-rose-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-60">
+            {isProcessing ? "Processing..." : confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState<"general" | "payments" | "business">(
     "general"
@@ -292,6 +380,12 @@ export default function AdminPage() {
   const [isSavingBusinessEmails, setIsSavingBusinessEmails] = useState(false);
   const [businessNotice, setBusinessNotice] = useState("");
   const [businessError, setBusinessError] = useState("");
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [isCancellingSubscription, setIsCancellingSubscription] = useState(false);
+  const [dangerNotice, setDangerNotice] = useState("");
+  const [dangerError, setDangerError] = useState("");
+  const [pendingDangerAction, setPendingDangerAction] =
+    useState<DangerAction | null>(null);
   const slackClientId = process.env.NEXT_PUBLIC_SLACK_CLIENT_ID;
   const slackOauthConfigured = Boolean(slackClientId);
 
@@ -389,6 +483,7 @@ export default function AdminPage() {
   }, [user]);
 
   const canAddToSlack =
+    subscriptionActive &&
     slackOauthConfigured &&
     (user?.workspaceLimit ?? 0) > 0 &&
     user !== null &&
@@ -455,9 +550,22 @@ export default function AdminPage() {
     setIsSaving(true);
     setNotice("");
     setError("");
+
+    if (!isReasonableLength(defaultLanguage, LANGUAGE_MAX_LENGTH)) {
+      setError("Default language value is too long.");
+      setIsSaving(false);
+      return;
+    }
+
+    if (hasControlChars(defaultLanguage)) {
+      setError("Default language contains invalid characters.");
+      setIsSaving(false);
+      return;
+    }
+
     try {
       const payload = {
-        defaultLanguage,
+        defaultLanguage: defaultLanguage.trim(),
       };
 
       const response = await apiFetch("/users/me", {
@@ -497,6 +605,26 @@ export default function AdminPage() {
 
     if (!password) {
       setPasswordError("Enter a new password.");
+      setIsSavingPassword(false);
+      return;
+    }
+
+    if (
+      !isReasonableLength(currentPassword, PASSWORD_MAX_LENGTH) ||
+      !isReasonableLength(password, PASSWORD_MAX_LENGTH) ||
+      !isReasonableLength(confirmPassword, PASSWORD_MAX_LENGTH)
+    ) {
+      setPasswordError("Password fields are too long.");
+      setIsSavingPassword(false);
+      return;
+    }
+
+    if (
+      hasControlChars(currentPassword) ||
+      hasControlChars(password) ||
+      hasControlChars(confirmPassword)
+    ) {
+      setPasswordError("Password fields contain invalid characters.");
       setIsSavingPassword(false);
       return;
     }
@@ -575,11 +703,21 @@ export default function AdminPage() {
   };
 
   const handleAddAvailableEmails = () => {
+    if (!isReasonableLength(availableEmailDraft, EMAIL_LIST_TEXT_MAX_LENGTH)) {
+      setBusinessError("The email list is too long.");
+      return;
+    }
+
+    if (hasControlChars(availableEmailDraft.replace(/\r?\n/g, ""))) {
+      setBusinessError("The email list contains invalid characters.");
+      return;
+    }
+
     const parsedEmails = Array.from(
       new Set(
         availableEmailDraft
           .split(/\r?\n/)
-          .map((item) => item.trim())
+          .map((item) => normalizeEmail(item))
           .filter(Boolean)
       )
     );
@@ -589,7 +727,12 @@ export default function AdminPage() {
       return;
     }
 
-    const invalidEmails = parsedEmails.filter((email) => !emailRegex.test(email));
+    const invalidEmails = parsedEmails.filter(
+      (email) =>
+        !isReasonableLength(email, EMAIL_LIST_ITEM_MAX_LENGTH) ||
+        hasControlChars(email) ||
+        !emailRegex.test(email)
+    );
     if (invalidEmails.length > 0) {
       setBusinessError(`Invalid email format: ${invalidEmails.join(", ")}`);
       return;
@@ -722,6 +865,158 @@ export default function AdminPage() {
     } finally {
       setIsSavingBusinessEmails(false);
     }
+  };
+
+  const executeCancelSubscription = async () => {
+    setDangerNotice("");
+    setDangerError("");
+
+    setIsCancellingSubscription(true);
+
+    try {
+      const response = await apiFetch("/stripe/subscriptions", {
+        method: "DELETE",
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "same-origin",
+        });
+        setPendingDangerAction(null);
+        setReauthNotice("Your session expired. Please sign in again.");
+        setRequiresAuth(true);
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Unable to cancel subscription.");
+      }
+
+      const data = (await response.json()) as StripeSubscriptionVM;
+
+      setUser((prev) => {
+        if (!prev) {
+          return prev;
+        }
+
+        return {
+          ...prev,
+          offerType: data.offerType,
+          admin: data.admin,
+          regularUserSeats: data.regularUserSeats,
+          workspaceLimit: data.workspaceLimit,
+          regularUserEmails: data.regularUserEmails,
+          stripeSubscription: {
+            stripeCustomerId: data.stripeCustomerId,
+            stripeSubscriptionId: data.stripeSubscriptionId,
+            subscriptionActive: data.subscriptionActive,
+            workspaceLimit: data.workspaceLimit,
+            offerType: data.offerType,
+            admin: data.admin,
+            regularUserSeats: data.regularUserSeats,
+            regularUserEmails: data.regularUserEmails,
+            availableRegularUserEmails:
+              prev.stripeSubscription?.availableRegularUserEmails ??
+              prev.availableRegularUserEmails,
+          },
+        };
+      });
+      setPendingDangerAction(null);
+      setDangerNotice("Subscription cancelled.");
+    } catch (cancelError) {
+      setDangerError(
+        cancelError instanceof Error
+          ? cancelError.message
+          : "Unable to cancel subscription."
+      );
+    } finally {
+      setIsCancellingSubscription(false);
+    }
+  };
+
+  const executeDeleteAccount = async () => {
+    setDangerNotice("");
+    setDangerError("");
+
+    setIsDeletingAccount(true);
+
+    try {
+      const response = await apiFetch("/users/me", {
+        method: "DELETE",
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "same-origin",
+        });
+        setPendingDangerAction(null);
+        setReauthNotice("Your session expired. Please sign in again.");
+        setRequiresAuth(true);
+        return;
+      }
+
+      const data = (await response.json().catch(() => null)) as
+        | AccountDeletionVM
+        | null;
+
+      if (!response.ok) {
+        throw new Error("Unable to delete account.");
+      }
+
+      if (data?.deletedUser) {
+        await fetch("/api/auth/logout", {
+          method: "POST",
+          credentials: "same-origin",
+        });
+        setPendingDangerAction(null);
+        setReauthNotice("Your account has been deleted.");
+        setRequiresAuth(true);
+        return;
+      }
+
+      if (data?.activeSubscription) {
+        setDangerError(
+          "You must cancel your active subscription before deleting the account."
+        );
+        return;
+      }
+
+      setDangerError("The account could not be deleted.");
+    } catch (deleteError) {
+      setDangerError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Unable to delete account."
+      );
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
+  const handleCancelSubscription = () => {
+    setDangerNotice("");
+    setDangerError("");
+    setPendingDangerAction("cancel-subscription");
+  };
+
+  const handleDeleteAccount = () => {
+    setDangerNotice("");
+    setDangerError("");
+    setPendingDangerAction("delete-account");
+  };
+
+  const closeDangerModal = () => {
+    if (isDeletingAccount) {
+      return;
+    }
+
+    if (isCancellingSubscription) {
+      return;
+    }
+
+    setPendingDangerAction(null);
   };
 
   if (requiresAuth) {
@@ -916,6 +1211,43 @@ export default function AdminPage() {
                       </h3>
                       <DetailList items={profileDetails} />
                     </div>
+
+                    <div className="mt-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 p-4">
+                      <div className="flex flex-col gap-2">
+                        <h3 className="text-sm font-semibold text-rose-100">
+                          Danger zone
+                        </h3>
+                        <p className="text-xs text-rose-100/80">
+                          Sensitive account actions live here. These actions will
+                          require confirmation before they are enabled.
+                        </p>
+                      </div>
+                      <div className="mt-4 flex flex-wrap gap-3">
+                        <button
+                          type="button"
+                          onClick={handleCancelSubscription}
+                          className="rounded-full border border-rose-300/40 px-4 py-2 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/10">
+                          Cancel subscription
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleDeleteAccount}
+                          disabled={isDeletingAccount}
+                          className="rounded-full bg-rose-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-60">
+                          {isDeletingAccount ? "Deleting..." : "Delete account"}
+                        </button>
+                      </div>
+                      {dangerNotice ? (
+                        <p className="mt-3 text-xs text-rose-100/80">
+                          {dangerNotice}
+                        </p>
+                      ) : null}
+                      {dangerError ? (
+                        <Notice tone="error" className="mt-3">
+                          {dangerError}
+                        </Notice>
+                      ) : null}
+                    </div>
                   </>
                 ) : activeTab === "payments" ? (
                   <div>
@@ -953,6 +1285,7 @@ export default function AdminPage() {
                           value={availableEmailDraft}
                           onChange={(event) => setAvailableEmailDraft(event.target.value)}
                           rows={4}
+                          maxLength={EMAIL_LIST_TEXT_MAX_LENGTH}
                           placeholder={"user1@example.com\nuser2@example.com"}
                           className={ui.textarea}
                         />
@@ -1093,7 +1426,9 @@ export default function AdminPage() {
                       </button>
                       <Notice tone="warning" className="flex items-center justify-between gap-3 text-xs">
                         <span>
-                          {slackOauthConfigured
+                          {!subscriptionActive
+                            ? "Purchase and activate a subscription to connect Slack."
+                            : slackOauthConfigured
                             ? "Workspace limit reached."
                             : "Slack OAuth is not configured (NEXT_PUBLIC_SLACK_CLIENT_ID)."}
                         </span>
@@ -1112,7 +1447,7 @@ export default function AdminPage() {
                   Default language
                 </label>
                 <p className="mt-1 text-xs text-white/60">
-                  Choose the default AWS Translate language.
+                  Choose the default Translate language.
                 </p>
                 <div className="relative mt-3">
                   <select
@@ -1179,6 +1514,7 @@ export default function AdminPage() {
                         value={currentPassword}
                         onChange={(event) => setCurrentPassword(event.target.value)}
                         autoComplete="current-password"
+                        maxLength={PASSWORD_MAX_LENGTH}
                         className={ui.input}
                         placeholder="Enter your current password"
                       />
@@ -1192,6 +1528,7 @@ export default function AdminPage() {
                         value={password}
                         onChange={(event) => setPassword(event.target.value)}
                         autoComplete="new-password"
+                        maxLength={PASSWORD_MAX_LENGTH}
                         className={ui.input}
                         placeholder="Enter a new password"
                       />
@@ -1207,6 +1544,7 @@ export default function AdminPage() {
                           setConfirmPassword(event.target.value)
                         }
                         autoComplete="new-password"
+                        maxLength={PASSWORD_MAX_LENGTH}
                         className={ui.input}
                         placeholder="Re-enter new password"
                       />
@@ -1235,7 +1573,24 @@ export default function AdminPage() {
           </div>
         </section>
       </main>
+      <DangerConfirmModal
+        isOpen={pendingDangerAction === "cancel-subscription"}
+        title="Cancel subscription"
+        description="Are you sure you want to cancel your subscription? This will disable your active subscription for the current workspace plan."
+        confirmLabel="Confirm cancellation"
+        isProcessing={isCancellingSubscription}
+        onCancel={closeDangerModal}
+        onConfirm={executeCancelSubscription}
+      />
+      <DangerConfirmModal
+        isOpen={pendingDangerAction === "delete-account"}
+        title="Delete account"
+        description="This action permanently deletes your account. If you still have an active subscription, the API may reject the request until the subscription is cancelled."
+        confirmLabel="Delete account"
+        isProcessing={isDeletingAccount}
+        onCancel={closeDangerModal}
+        onConfirm={executeDeleteAccount}
+      />
     </div>
   );
 }
-
