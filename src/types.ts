@@ -1,29 +1,22 @@
 export type OfferType = "INDIVIDUAL" | "BUSINESS";
+export type BillingInterval = "MONTHLY" | "YEARLY";
 
 export interface OfferPlanResponse {
   type: OfferType;
+  billingInterval: BillingInterval;
   title: string;
   audience: string;
   pricePerMonthUsd: number;
   included: string[];
 }
 
-export interface SetupIntentRequest {
+export interface CheckoutSessionRequest {
   offerType: OfferType;
+  billingInterval: BillingInterval;
+  seats?: number;
 }
 
-export interface SetupIntentResponse {
-  clientSecret: string;
-}
-
-export interface SubscriptionRequest {
-  paymentMethodId: string;
-  offerType: OfferType;
-}
-
-export interface SubscriptionResponse {
-  stripeCustomerId: string;
-  stripeSubscriptionId: string;
-  subscriptionActive: boolean;
-  emailLimit: number;
+export interface CheckoutSessionResponse {
+  sessionId: string;
+  url: string;
 }

@@ -1,92 +1,78 @@
-﻿"use client";
+"use client";
 
-import {
-  PaymentElement,
-  useElements,
-  useStripe,
-} from "@stripe/react-stripe-js";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { fetchJSON } from "../lib/api";
+import { apiFetch } from "../lib/api";
 import type {
-  OfferType,
-  SubscriptionResponse,
-  SubscriptionRequest,
+  CheckoutSessionRequest,
+  CheckoutSessionResponse,
+  OfferPlanResponse,
 } from "../types";
 
 interface StripeCheckoutFormProps {
-  clientSecret: string;
-  offerType: OfferType;
+  offer: OfferPlanResponse;
 }
 
-export default function StripeCheckoutForm({
-  clientSecret,
-  offerType,
-}: StripeCheckoutFormProps) {
-  const stripe = useStripe();
-  const elements = useElements();
+const formatBillingInterval = (value: OfferPlanResponse["billingInterval"]) =>
+  value === "YEARLY" ? "Yearly billing" : "Monthly billing";
+
+export default function StripeCheckoutForm({ offer }: StripeCheckoutFormProps) {
+  const router = useRouter();
+  const [seats, setSeats] = useState("1");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [result, setResult] = useState<SubscriptionResponse | null>(null);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!stripe || !elements) {
-      setErrorMessage("Stripe is not ready yet.");
-      return;
-    }
-
     setIsSubmitting(true);
     setErrorMessage(null);
-    setResult(null);
-
-    const { error: submitError } = await elements.submit();
-
-    if (submitError) {
-      setErrorMessage(submitError.message ?? "Failed to submit the form.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    const { error, setupIntent } = await stripe.confirmSetup({
-      elements,
-      clientSecret,
-      redirect: "if_required",
-    });
-
-    if (error) {
-      setErrorMessage(error.message ?? "Failed to confirm payment.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    const paymentMethodId =
-      typeof setupIntent?.payment_method === "string"
-        ? setupIntent.payment_method
-        : null;
-
-    if (!paymentMethodId) {
-      setErrorMessage("Missing payment method after confirmation.");
-      setIsSubmitting(false);
-      return;
-    }
 
     try {
-      const subscription = await fetchJSON<SubscriptionResponse>(
-        "/stripe/subscriptions",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            paymentMethodId,
-            offerType,
-          } satisfies SubscriptionRequest),
+      const payload: CheckoutSessionRequest = {
+        offerType: offer.type,
+        billingInterval: offer.billingInterval,
+      };
+
+      if (offer.type === "BUSINESS") {
+        const parsedSeats = Number.parseInt(seats, 10);
+
+        if (!Number.isInteger(parsedSeats) || parsedSeats < 1) {
+          setErrorMessage("Enter at least 1 seat for the Business plan.");
+          return;
         }
-      );
-      setResult(subscription);
+
+        payload.seats = parsedSeats;
+      }
+
+      const response = await apiFetch("/stripe/checkout-session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.status === 401) {
+        router.push("/auth?mode=login");
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Failed to start Stripe Checkout.");
+      }
+
+      const data = (await response.json()) as CheckoutSessionResponse;
+
+      if (!data.url) {
+        throw new Error("Missing checkout URL.");
+      }
+
+      window.location.assign(data.url);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Failed to create subscription.";
+        error instanceof Error ? error.message : "Failed to start Stripe Checkout.";
       setErrorMessage(message);
     } finally {
       setIsSubmitting(false);
@@ -95,7 +81,29 @@ export default function StripeCheckoutForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <PaymentElement />
+      <div>
+        <p className="text-sm font-semibold text-slate-900">Selected plan</p>
+        <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <p className="text-sm font-semibold text-slate-900">{offer.title}</p>
+          <p className="mt-1 text-sm text-slate-600">
+            {offer.type} · {formatBillingInterval(offer.billingInterval)}
+          </p>
+        </div>
+      </div>
+
+      {offer.type === "BUSINESS" ? (
+        <div>
+          <label className="text-sm font-semibold text-slate-900">Seats</label>
+          <input
+            type="number"
+            min={1}
+            step={1}
+            value={seats}
+            onChange={(event) => setSeats(event.target.value)}
+            className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:border-slate-900 focus:outline-none"
+          />
+        </div>
+      ) : null}
 
       {errorMessage ? (
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
@@ -103,20 +111,11 @@ export default function StripeCheckoutForm({
         </p>
       ) : null}
 
-      {result ? (
-        <div className="rounded-md bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
-          <p>
-            Subscription status: {result.subscriptionActive ? "Active" : "Inactive"}
-          </p>
-          <p>Email limit: {result.emailLimit}</p>
-        </div>
-      ) : null}
-
       <button
         type="submit"
-        disabled={isSubmitting || !stripe}
+        disabled={isSubmitting}
         className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-400">
-        {isSubmitting ? "Processing..." : "Confirm"}
+        {isSubmitting ? "Redirecting..." : "Continue to Stripe Checkout"}
       </button>
     </form>
   );
