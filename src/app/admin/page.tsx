@@ -380,6 +380,9 @@ export default function AdminPage() {
   const [isSavingBusinessEmails, setIsSavingBusinessEmails] = useState(false);
   const [businessNotice, setBusinessNotice] = useState("");
   const [businessError, setBusinessError] = useState("");
+  const [isUpdatingWorkspaceLimit, setIsUpdatingWorkspaceLimit] = useState(false);
+  const [workspaceLimitNotice, setWorkspaceLimitNotice] = useState("");
+  const [workspaceLimitError, setWorkspaceLimitError] = useState("");
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
   const [isCancellingSubscription, setIsCancellingSubscription] = useState(false);
   const [dangerNotice, setDangerNotice] = useState("");
@@ -503,7 +506,6 @@ export default function AdminPage() {
       { label: "Email", value: user.email },
       { label: "Offer type", value: currentOfferType },
       { label: "Workspace used", value: user.workspaceUsed },
-      { label: "Workspace limit", value: user.workspaceLimit },
       { label: "Created at", value: formatDateTime(user.createdAt) },
     ];
   }, [currentOfferType, user]);
@@ -539,6 +541,36 @@ export default function AdminPage() {
       },
     ];
   }, [subscriptionActive, user]);
+
+  const applyStripeSubscriptionState = (data: StripeSubscriptionVM) => {
+    setUser((prev) => {
+      if (!prev) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        offerType: data.offerType,
+        admin: data.admin,
+        regularUserSeats: data.regularUserSeats,
+        workspaceLimit: data.workspaceLimit,
+        regularUserEmails: data.regularUserEmails,
+        stripeSubscription: {
+          stripeCustomerId: data.stripeCustomerId,
+          stripeSubscriptionId: data.stripeSubscriptionId,
+          subscriptionActive: data.subscriptionActive,
+          workspaceLimit: data.workspaceLimit,
+          offerType: data.offerType,
+          admin: data.admin,
+          regularUserSeats: data.regularUserSeats,
+          regularUserEmails: data.regularUserEmails,
+          availableRegularUserEmails:
+            prev.stripeSubscription?.availableRegularUserEmails ??
+            prev.availableRegularUserEmails,
+        },
+      };
+    });
+  };
 
   useEffect(() => {
     if (!isBusinessOffer && activeTab === "business") {
@@ -895,33 +927,7 @@ export default function AdminPage() {
 
       const data = (await response.json()) as StripeSubscriptionVM;
 
-      setUser((prev) => {
-        if (!prev) {
-          return prev;
-        }
-
-        return {
-          ...prev,
-          offerType: data.offerType,
-          admin: data.admin,
-          regularUserSeats: data.regularUserSeats,
-          workspaceLimit: data.workspaceLimit,
-          regularUserEmails: data.regularUserEmails,
-          stripeSubscription: {
-            stripeCustomerId: data.stripeCustomerId,
-            stripeSubscriptionId: data.stripeSubscriptionId,
-            subscriptionActive: data.subscriptionActive,
-            workspaceLimit: data.workspaceLimit,
-            offerType: data.offerType,
-            admin: data.admin,
-            regularUserSeats: data.regularUserSeats,
-            regularUserEmails: data.regularUserEmails,
-            availableRegularUserEmails:
-              prev.stripeSubscription?.availableRegularUserEmails ??
-              prev.availableRegularUserEmails,
-          },
-        };
-      });
+      applyStripeSubscriptionState(data);
       setPendingDangerAction(null);
       setDangerNotice("Subscription cancelled.");
     } catch (cancelError) {
@@ -1005,6 +1011,80 @@ export default function AdminPage() {
     setDangerNotice("");
     setDangerError("");
     setPendingDangerAction("delete-account");
+  };
+
+  const handleAddWorkspace = async () => {
+    setWorkspaceLimitNotice("");
+    setWorkspaceLimitError("");
+    setIsUpdatingWorkspaceLimit(true);
+
+    try {
+      const response = await apiFetch("/stripe/subscriptions/workspaces", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ additionalWorkspaces: 1 }),
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        setWorkspaceLimitError(
+          "Your session could not be verified. Sign in again and retry."
+        );
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Unable to add workspace.");
+      }
+
+      const data = (await response.json()) as StripeSubscriptionVM;
+      applyStripeSubscriptionState(data);
+      setWorkspaceLimitNotice("Workspace limit increased.");
+    } catch (workspaceError) {
+      setWorkspaceLimitError(
+        workspaceError instanceof Error
+          ? workspaceError.message
+          : "Unable to add workspace."
+      );
+    } finally {
+      setIsUpdatingWorkspaceLimit(false);
+    }
+  };
+
+  const handleRemoveWorkspace = async () => {
+    setWorkspaceLimitNotice("");
+    setWorkspaceLimitError("");
+    setIsUpdatingWorkspaceLimit(true);
+
+    try {
+      const response = await apiFetch("/stripe/subscriptions/workspaces", {
+        method: "DELETE",
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        setWorkspaceLimitError(
+          "Your session could not be verified. Sign in again and retry."
+        );
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Unable to remove workspace.");
+      }
+
+      const data = (await response.json()) as StripeSubscriptionVM;
+      applyStripeSubscriptionState(data);
+      setWorkspaceLimitNotice("Workspace limit reduced.");
+    } catch (workspaceError) {
+      setWorkspaceLimitError(
+        workspaceError instanceof Error
+          ? workspaceError.message
+          : "Unable to remove workspace."
+      );
+    } finally {
+      setIsUpdatingWorkspaceLimit(false);
+    }
   };
 
   const closeDangerModal = () => {
@@ -1210,6 +1290,40 @@ export default function AdminPage() {
                         Account details
                       </h3>
                       <DetailList items={profileDetails} />
+                      <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                        <p className="text-xs uppercase tracking-wide text-white/60">
+                          Workspace limit
+                        </p>
+                        <p className="mt-1 text-white">
+                          {formatValue(user?.workspaceLimit ?? null)}
+                        </p>
+                        <div className="mt-4 flex flex-wrap gap-3">
+                          <button
+                            type="button"
+                            onClick={handleAddWorkspace}
+                            disabled={isUpdatingWorkspaceLimit}
+                            className="rounded-full bg-indigo-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-60">
+                            Add workspace
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleRemoveWorkspace}
+                            disabled={isUpdatingWorkspaceLimit}
+                            className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white transition hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-60">
+                            Remove workspace
+                          </button>
+                        </div>
+                        {workspaceLimitNotice ? (
+                          <p className="mt-3 text-xs text-emerald-200">
+                            {workspaceLimitNotice}
+                          </p>
+                        ) : null}
+                        {workspaceLimitError ? (
+                          <Notice tone="error" className="mt-3">
+                            {workspaceLimitError}
+                          </Notice>
+                        ) : null}
+                      </div>
                     </div>
 
                     <div className="mt-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 p-4">
