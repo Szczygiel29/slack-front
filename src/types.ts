@@ -6,7 +6,11 @@ export interface OfferPlanResponse {
   billingInterval: BillingInterval;
   title: string;
   audience: string;
-  pricePerMonthUsd: number;
+  pricePerMonthUsd: number | null;
+  pricePerYearUsd: number | null;
+  additionalWorkspacePriceUsd: number | null;
+  additionalWorkspacePricedPerUser: boolean;
+  pricedPerUser: boolean;
   included: string[];
 }
 

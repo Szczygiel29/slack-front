@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { useOfferPlans } from "../hooks/useOfferPlans";
-import { formatUsdPrice } from "../lib/offers";
+import { formatUsdPrice, getOfferDisplayPrice } from "../lib/offers";
 
 const navLinks = [
   { label: "Features", href: "#features" },
@@ -652,10 +652,18 @@ export default function Home() {
                       </p>
                     </td>
                     <td className="px-6 py-5 align-top text-lg font-semibold text-white">
-                      {formatUsdPrice(plan.pricePerMonthUsd)}
-                      <span className="text-xs font-normal text-white/60">
-                        /user/mo
-                      </span>
+                      {(() => {
+                        const { amount, unitLabel } = getOfferDisplayPrice(plan);
+
+                        return (
+                          <>
+                            {formatUsdPrice(amount)}
+                            <span className="ml-1 text-xs font-normal text-white/60">
+                              {unitLabel}
+                            </span>
+                          </>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 py-5 align-top">
                       <ul className="space-y-2">

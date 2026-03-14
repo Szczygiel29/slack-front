@@ -5,7 +5,11 @@ import { useEffect, useState } from "react";
 
 import CheckoutModal from "../../components/CheckoutModal";
 import StripeCheckoutForm from "../../components/StripeCheckoutForm";
-import { fetchOfferPlans, formatUsdPrice } from "../../lib/offers";
+import {
+  fetchOfferPlans,
+  formatUsdPrice,
+  getOfferDisplayPrice,
+} from "../../lib/offers";
 import type { OfferPlanResponse } from "../../types";
 
 export default function OffersPage() {
@@ -92,36 +96,46 @@ export default function OffersPage() {
               <article
                 key={`${offer.type}-${offer.title}`}
                 className="flex h-full flex-col rounded-3xl border border-white/10 bg-white/5 p-6">
-                <p className="text-xs font-semibold uppercase tracking-widest text-indigo-200">
-                  {offer.type}
-                </p>
-                <h2 className="mt-2 text-2xl font-semibold text-white">
-                  {offer.title}
-                </h2>
-                <p className="mt-1 text-sm text-white/70">{offer.audience}</p>
-                <p className="mt-5 text-3xl font-bold text-white">
-                  {formatUsdPrice(offer.pricePerMonthUsd)}
-                  <span className="ml-1 text-sm font-medium text-white/60">
-                    /month
-                  </span>
-                </p>
+                {(() => {
+                  const { amount, unitLabel } = getOfferDisplayPrice(offer);
 
-                <ul className="mt-6 flex-1 space-y-2 text-sm text-white/85">
-                  {offer.included.map((item) => (
-                    <li
-                      key={item}
-                      className="rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2">
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+                  return (
+                    <>
+                      <p className="text-xs font-semibold uppercase tracking-widest text-indigo-200">
+                        {offer.type}
+                      </p>
+                      <h2 className="mt-2 text-2xl font-semibold text-white">
+                        {offer.title}
+                      </h2>
+                      <p className="mt-1 text-sm text-white/70">{offer.audience}</p>
+                      <p className="mt-5 text-3xl font-bold text-white">
+                        {formatUsdPrice(amount)}
+                        <span className="ml-1 text-sm font-medium text-white/60">
+                          {unitLabel}
+                        </span>
+                      </p>
 
-                <button
-                  type="button"
-                  onClick={() => handleSelectOffer(offer)}
-                  className="mt-6 w-full rounded-full bg-indigo-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300">
-                  Select
-                </button>
+                      <ul className="mt-6 flex-1 space-y-2 text-sm text-white/85">
+                        {offer.included.map((item) => (
+                          <li
+                            key={item}
+                            className="rounded-xl border border-white/10 bg-slate-950/60 px-3 py-2">
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+
+                      <div className="mt-6">
+                        <button
+                          type="button"
+                          onClick={() => handleSelectOffer(offer)}
+                          className="w-full rounded-full bg-indigo-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300">
+                          Select
+                        </button>
+                      </div>
+                    </>
+                  );
+                })()}
               </article>
             ))}
           </section>

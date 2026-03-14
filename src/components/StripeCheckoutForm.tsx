@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { apiFetch } from "../lib/api";
+import { getOfferBillingInterval } from "../lib/offers";
 import type {
   CheckoutSessionRequest,
   CheckoutSessionResponse,
@@ -14,7 +15,7 @@ interface StripeCheckoutFormProps {
   offer: OfferPlanResponse;
 }
 
-const formatBillingInterval = (value: OfferPlanResponse["billingInterval"]) =>
+const formatBillingInterval = (value: "MONTHLY" | "YEARLY") =>
   value === "YEARLY" ? "Yearly billing" : "Monthly billing";
 
 export default function StripeCheckoutForm({ offer }: StripeCheckoutFormProps) {
@@ -22,6 +23,7 @@ export default function StripeCheckoutForm({ offer }: StripeCheckoutFormProps) {
   const [seats, setSeats] = useState("1");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const billingInterval = getOfferBillingInterval(offer);
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -32,7 +34,7 @@ export default function StripeCheckoutForm({ offer }: StripeCheckoutFormProps) {
     try {
       const payload: CheckoutSessionRequest = {
         offerType: offer.type,
-        billingInterval: offer.billingInterval,
+        billingInterval,
       };
 
       if (offer.type === "BUSINESS") {
@@ -86,7 +88,7 @@ export default function StripeCheckoutForm({ offer }: StripeCheckoutFormProps) {
         <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
           <p className="text-sm font-semibold text-slate-900">{offer.title}</p>
           <p className="mt-1 text-sm text-slate-600">
-            {offer.type} · {formatBillingInterval(offer.billingInterval)}
+            {offer.type} · {formatBillingInterval(billingInterval)}
           </p>
         </div>
       </div>

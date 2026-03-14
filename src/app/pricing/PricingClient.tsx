@@ -5,7 +5,7 @@ import { useState } from "react";
 import CheckoutModal from "../../components/CheckoutModal";
 import StripeCheckoutForm from "../../components/StripeCheckoutForm";
 import { useOfferPlans } from "../../hooks/useOfferPlans";
-import { formatUsdPrice } from "../../lib/offers";
+import { formatUsdPrice, getOfferDisplayPrice } from "../../lib/offers";
 import type { OfferPlanResponse } from "../../types";
 
 export default function PricingClient() {
@@ -53,22 +53,32 @@ export default function PricingClient() {
             <div
               key={`${plan.type}-${plan.title}`}
               className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-              <h2 className="text-xl font-semibold text-slate-900">
-                {plan.title}
-              </h2>
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {formatUsdPrice(plan.pricePerMonthUsd)}
-                <span className="ml-1 text-sm font-medium text-slate-500">
-                  /month
-                </span>
-              </p>
-              <p className="mt-3 text-sm text-slate-600">{plan.audience}</p>
-              <button
-                type="button"
-                onClick={() => handleSelectPlan(plan)}
-                className="mt-6 w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">
-                Select
-              </button>
+              {(() => {
+                const { amount, unitLabel } = getOfferDisplayPrice(plan);
+
+                return (
+                  <>
+                    <h2 className="text-xl font-semibold text-slate-900">
+                      {plan.title}
+                    </h2>
+                    <p className="mt-2 text-2xl font-bold text-slate-900">
+                      {formatUsdPrice(amount)}
+                      <span className="ml-1 text-sm font-medium text-slate-500">
+                        {unitLabel}
+                      </span>
+                    </p>
+                    <p className="mt-3 text-sm text-slate-600">{plan.audience}</p>
+                    <div className="mt-6">
+                      <button
+                        type="button"
+                        onClick={() => handleSelectPlan(plan)}
+                        className="w-full rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800">
+                        Select
+                      </button>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           ))}
         </div>

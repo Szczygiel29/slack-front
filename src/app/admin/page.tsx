@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import { apiFetch } from "../../lib/api";
+import { fetchOfferPlan, formatUsdPrice } from "../../lib/offers";
 import {
   EMAIL_LIST_ITEM_MAX_LENGTH,
   EMAIL_LIST_TEXT_MAX_LENGTH,
@@ -14,11 +15,14 @@ import {
   isReasonableLength,
   normalizeEmail,
 } from "../../lib/validation";
-import type { OfferType } from "../../types";
+import type { BillingInterval, OfferPlanResponse, OfferType } from "../../types";
+
+type SlackUserType = "INDIVIDUAL" | "BUSINESS_ADMIN" | "BUSINESS_MEMBER";
 
 type SlackUserVM = {
   id: number;
   email: string;
+  type?: SlackUserType | null;
   offerType?: OfferType | null;
   admin?: boolean;
   regularUserSeats?: number;
@@ -31,6 +35,8 @@ type SlackUserVM = {
     stripeCustomerId?: string | null;
     stripeSubscriptionId?: string | null;
     subscriptionActive: boolean;
+    currentAmountCents?: number | null;
+    currency?: string | null;
     workspaceLimit?: number | null;
     offerType?: OfferType | null;
     admin?: boolean;
@@ -50,10 +56,26 @@ type SlackWorkspaceVM = {
   link: string | null;
 };
 
+type OrganizationVM = {
+  id: number;
+  companyName: string;
+  nip: string;
+  addressLine1: string;
+  addressLine2: string | null;
+  city: string;
+  postalCode: string;
+  countryCode: string;
+  billingEmail: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
 type StripeSubscriptionVM = {
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
   subscriptionActive: boolean;
+  currentAmountCents?: number | null;
+  currency?: string | null;
   workspaceLimit: number;
   offerType: OfferType;
   admin: boolean;
@@ -66,11 +88,29 @@ type AccountDeletionVM = {
   deletedUser: boolean;
 };
 
-type DangerAction = "cancel-subscription" | "delete-account";
+type DangerAction =
+  | "cancel-subscription"
+  | "delete-account"
+  | "add-workspace"
+  | "remove-workspace"
+  | "save-business-emails"
+  | "add-business-seat"
+  | "remove-business-seat";
 
 type LanguageOption = {
   value: string;
   label: string;
+};
+
+type OrganizationFormState = {
+  companyName: string;
+  nip: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  postalCode: string;
+  countryCode: string;
+  billingEmail: string;
 };
 
 type NoticeTone = "success" | "error" | "warning" | "muted";
@@ -135,6 +175,69 @@ const formatDateTime = (value: string | null) => {
   }).format(date);
 };
 
+const formatCurrencyAmount = (
+  amountCents: number | null | undefined,
+  currency: string | null | undefined
+) => {
+  if (amountCents === null || amountCents === undefined || !currency) {
+    return null;
+  }
+
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: currency.toUpperCase(),
+  }).format(amountCents / 100);
+};
+
+const getBillingModelFromDates = (
+  subscriptionStartedAt: string | null,
+  nextBillingAt: string | null
+) => {
+  const interval = getBillingIntervalFromDates(
+    subscriptionStartedAt,
+    nextBillingAt
+  );
+
+  if (interval === "YEARLY") {
+    return "Yearly billing";
+  }
+
+  if (interval === "MONTHLY") {
+    return "Monthly billing";
+  }
+
+  return null;
+};
+
+const getBillingIntervalFromDates = (
+  subscriptionStartedAt: string | null,
+  nextBillingAt: string | null
+): BillingInterval | null => {
+  if (!subscriptionStartedAt || !nextBillingAt) {
+    return null;
+  }
+
+  const started = new Date(subscriptionStartedAt);
+  const nextBilling = new Date(nextBillingAt);
+
+  if (Number.isNaN(started.getTime()) || Number.isNaN(nextBilling.getTime())) {
+    return null;
+  }
+
+  const diffMs = nextBilling.getTime() - started.getTime();
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+
+  if (diffDays >= 300) {
+    return "YEARLY";
+  }
+
+  if (diffDays >= 25) {
+    return "MONTHLY";
+  }
+
+  return null;
+};
+
 const normalizeWorkspaceLink = (link: string | null) => {
   if (!link) {
     return "";
@@ -163,8 +266,20 @@ const normalizeEmailList = (value: unknown): string[] => {
 };
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const countryCodeRegex = /^[A-Za-z]{2}$/;
 const passwordStrengthRegex =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{12,}$/;
+
+const emptyOrganizationForm: OrganizationFormState = {
+  companyName: "",
+  nip: "",
+  addressLine1: "",
+  addressLine2: "",
+  city: "",
+  postalCode: "",
+  countryCode: "",
+  billingEmail: "",
+};
 
 const getSensitiveActionErrorMessage = (status: number, fallback: string) => {
   if (status === 400) {
@@ -288,17 +403,23 @@ function TabButton({
 
 function DangerConfirmModal({
   isOpen,
+  eyebrow = "Danger zone",
   title,
   description,
   confirmLabel,
+  accent = "danger",
+  cancelLabel = "Keep account",
   isProcessing,
   onCancel,
   onConfirm,
 }: {
   isOpen: boolean;
+  eyebrow?: string;
   title: string;
   description: string;
   confirmLabel: string;
+  accent?: "danger" | "success";
+  cancelLabel?: string;
   isProcessing?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
@@ -307,13 +428,26 @@ function DangerConfirmModal({
     return null;
   }
 
+  const containerClass =
+    accent === "success"
+      ? "border-emerald-400/30 bg-slate-900"
+      : "border-rose-400/30 bg-slate-900";
+  const eyebrowClass =
+    accent === "success"
+      ? "text-emerald-300"
+      : "text-rose-300";
+  const confirmButtonClass =
+    accent === "success"
+      ? "rounded-full bg-emerald-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+      : "rounded-full bg-rose-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-60";
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/75 p-6 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-3xl border border-rose-400/30 bg-slate-900 p-6 shadow-2xl shadow-black/40">
+      <div className={`w-full max-w-md rounded-3xl border p-6 shadow-2xl shadow-black/40 ${containerClass}`}>
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-rose-300">
-              Danger zone
+            <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${eyebrowClass}`}>
+              {eyebrow}
             </p>
             <h2 className="mt-2 text-xl font-semibold text-white">{title}</h2>
           </div>
@@ -332,13 +466,13 @@ function DangerConfirmModal({
             onClick={onCancel}
             disabled={isProcessing}
             className="rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white/80 transition hover:border-white/30 hover:text-white disabled:cursor-not-allowed disabled:opacity-60">
-            Keep account
+            {cancelLabel}
           </button>
           <button
             type="button"
             onClick={onConfirm}
             disabled={isProcessing}
-            className="rounded-full bg-rose-500 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-400 disabled:cursor-not-allowed disabled:opacity-60">
+            className={confirmButtonClass}>
             {isProcessing ? "Processing..." : confirmLabel}
           </button>
         </div>
@@ -377,9 +511,23 @@ export default function AdminPage() {
   >([]);
   const [selectedUsedEmails, setSelectedUsedEmails] = useState<string[]>([]);
   const [availableEmailDraft, setAvailableEmailDraft] = useState("");
+  const [organization, setOrganization] = useState<OrganizationVM | null>(null);
+  const [currentOfferPlan, setCurrentOfferPlan] =
+    useState<OfferPlanResponse | null>(null);
+  const [organizationForm, setOrganizationForm] =
+    useState<OrganizationFormState>(emptyOrganizationForm);
+  const [isEditingOrganization, setIsEditingOrganization] = useState(false);
+  const [isLoadingOrganization, setIsLoadingOrganization] = useState(false);
+  const [isSavingOrganization, setIsSavingOrganization] = useState(false);
+  const [organizationNotice, setOrganizationNotice] = useState("");
+  const [organizationError, setOrganizationError] = useState("");
   const [isSavingBusinessEmails, setIsSavingBusinessEmails] = useState(false);
   const [businessNotice, setBusinessNotice] = useState("");
   const [businessError, setBusinessError] = useState("");
+  const [businessEmailsConfirmText, setBusinessEmailsConfirmText] = useState("");
+  const [isUpdatingBusinessSeats, setIsUpdatingBusinessSeats] = useState(false);
+  const [businessSeatsNotice, setBusinessSeatsNotice] = useState("");
+  const [businessSeatsError, setBusinessSeatsError] = useState("");
   const [isUpdatingWorkspaceLimit, setIsUpdatingWorkspaceLimit] = useState(false);
   const [workspaceLimitNotice, setWorkspaceLimitNotice] = useState("");
   const [workspaceLimitError, setWorkspaceLimitError] = useState("");
@@ -459,6 +607,25 @@ export default function AdminPage() {
   }, [user]);
 
   useEffect(() => {
+    if (!organization) {
+      setOrganizationForm(emptyOrganizationForm);
+      setIsEditingOrganization(false);
+      return;
+    }
+
+    setOrganizationForm({
+      companyName: organization.companyName ?? "",
+      nip: organization.nip ?? "",
+      addressLine1: organization.addressLine1 ?? "",
+      addressLine2: organization.addressLine2 ?? "",
+      city: organization.city ?? "",
+      postalCode: organization.postalCode ?? "",
+      countryCode: organization.countryCode ?? "",
+      billingEmail: organization.billingEmail ?? "",
+    });
+  }, [organization]);
+
+  useEffect(() => {
     if (!user) {
       setAvailableBusinessEmails([]);
       setUsedBusinessEmails([]);
@@ -496,7 +663,104 @@ export default function AdminPage() {
   const currentAdmin = user?.stripeSubscription?.admin ?? user?.admin ?? false;
   const currentRegularUserSeats =
     user?.stripeSubscription?.regularUserSeats ?? user?.regularUserSeats ?? 0;
-  const isBusinessOffer = currentOfferType === "BUSINESS";
+  const currentUserType = user?.type ?? "INDIVIDUAL";
+  const isBusinessAdmin = currentUserType === "BUSINESS_ADMIN";
+  const isBusinessMember = currentUserType === "BUSINESS_MEMBER";
+  const isBusinessOffer =
+    currentOfferType === "BUSINESS" || isBusinessAdmin || isBusinessMember;
+  const canManageBilling = !isBusinessMember;
+  const userId = user?.id ?? null;
+
+  useEffect(() => {
+    if (!userId || !isBusinessOffer) {
+      setOrganization(null);
+      setOrganizationForm(emptyOrganizationForm);
+      setIsEditingOrganization(false);
+      setOrganizationNotice("");
+      setOrganizationError("");
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadOrganization = async () => {
+      setIsLoadingOrganization(true);
+      setOrganizationError("");
+
+      try {
+        const response = await apiFetch("/organizations/me");
+
+        if (response.status === 404) {
+          if (isMounted) {
+            setOrganization(null);
+          }
+          return;
+        }
+
+        if (!response.ok) {
+          throw new Error("Unable to load organization details.");
+        }
+
+        const data = (await response.json()) as OrganizationVM;
+
+        if (isMounted) {
+          setOrganization(data);
+        }
+      } catch (loadError) {
+        if (isMounted) {
+          setOrganizationError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Unable to load organization details."
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingOrganization(false);
+        }
+      }
+    };
+
+    void loadOrganization();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isBusinessOffer, userId]);
+
+  const currentBillingInterval = getBillingIntervalFromDates(
+    user?.subscriptionStartedAt ?? null,
+    user?.nextBillingAt ?? null
+  );
+
+  useEffect(() => {
+    if (!currentOfferType || !currentBillingInterval) {
+      setCurrentOfferPlan(null);
+      return;
+    }
+
+    let isMounted = true;
+
+    const loadCurrentOffer = async () => {
+      try {
+        const data = await fetchOfferPlan(currentOfferType, currentBillingInterval);
+
+        if (isMounted) {
+          setCurrentOfferPlan(data);
+        }
+      } catch {
+        if (isMounted) {
+          setCurrentOfferPlan(null);
+        }
+      }
+    };
+
+    void loadCurrentOffer();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentBillingInterval, currentOfferType]);
 
   const profileDetails = useMemo(() => {
     if (!user) {
@@ -521,16 +785,52 @@ export default function AdminPage() {
     ];
   }, [currentAdmin, currentOfferType, currentRegularUserSeats, user]);
 
+  const organizationDetails = useMemo(() => {
+    if (!organization) {
+      return [];
+    }
+
+    return [
+      { label: "Company name", value: organization.companyName },
+      { label: "NIP", value: organization.nip },
+      { label: "Address line 1", value: organization.addressLine1 },
+      { label: "Address line 2", value: organization.addressLine2 },
+      { label: "City", value: organization.city },
+      { label: "Postal code", value: organization.postalCode },
+      { label: "Country code", value: organization.countryCode },
+      { label: "Billing email", value: organization.billingEmail },
+      { label: "Created at", value: formatDateTime(organization.createdAt) },
+      { label: "Updated at", value: formatDateTime(organization.updatedAt) },
+    ];
+  }, [organization]);
+
   const billingDetails = useMemo(() => {
     if (!user) {
       return [];
     }
+
+    const currentAmount = formatCurrencyAmount(
+      user.stripeSubscription?.currentAmountCents,
+      user.stripeSubscription?.currency
+    );
+    const billingModel = getBillingModelFromDates(
+      user.subscriptionStartedAt,
+      user.nextBillingAt
+    );
+
     return [
       {
         label: "Subscription started",
         value: formatDateTime(user.subscriptionStartedAt),
       },
       { label: "Next billing", value: formatDateTime(user.nextBillingAt) },
+      {
+        label: "Current amount",
+        value:
+          currentAmount && billingModel
+            ? `${currentAmount} (${billingModel})`
+            : currentAmount,
+      },
       {
         label: "Stripe subscription",
         value: user.stripeSubscription
@@ -541,6 +841,52 @@ export default function AdminPage() {
       },
     ];
   }, [subscriptionActive, user]);
+
+  const businessSeatPriceText = useMemo(() => {
+    if (!currentOfferPlan || !currentBillingInterval) {
+      return null;
+    }
+
+    const amount =
+      currentBillingInterval === "MONTHLY"
+        ? currentOfferPlan.pricePerMonthUsd
+        : currentOfferPlan.pricePerYearUsd;
+
+    if (!Number.isFinite(amount)) {
+      return null;
+    }
+
+    const formattedAmount = formatUsdPrice(amount);
+
+    if (currentBillingInterval === "YEARLY") {
+      return `${formattedAmount} charged immediately for the full year`;
+    }
+
+    return `${formattedAmount} added to your monthly billing`;
+  }, [currentBillingInterval, currentOfferPlan]);
+
+  const workspacePriceText = useMemo(() => {
+    if (!currentOfferPlan || !currentBillingInterval) {
+      return null;
+    }
+
+    const amount = currentOfferPlan.additionalWorkspacePriceUsd;
+
+    if (!Number.isFinite(amount)) {
+      return null;
+    }
+
+    const formattedAmount = formatUsdPrice(amount);
+    const perUserSuffix = currentOfferPlan.additionalWorkspacePricedPerUser
+      ? " calculated per user"
+      : "";
+
+    if (currentBillingInterval === "YEARLY") {
+      return `${formattedAmount} charged immediately for the full year billing${perUserSuffix}`;
+    }
+
+    return `${formattedAmount} added to your monthly billing${perUserSuffix}`;
+  }, [currentBillingInterval, currentOfferPlan]);
 
   const applyStripeSubscriptionState = (data: StripeSubscriptionVM) => {
     setUser((prev) => {
@@ -559,6 +905,8 @@ export default function AdminPage() {
           stripeCustomerId: data.stripeCustomerId,
           stripeSubscriptionId: data.stripeSubscriptionId,
           subscriptionActive: data.subscriptionActive,
+          currentAmountCents: data.currentAmountCents,
+          currency: data.currency,
           workspaceLimit: data.workspaceLimit,
           offerType: data.offerType,
           admin: data.admin,
@@ -577,6 +925,16 @@ export default function AdminPage() {
       setActiveTab("general");
     }
   }, [activeTab, isBusinessOffer]);
+
+  useEffect(() => {
+    if (!canManageBilling && activeTab === "payments") {
+      setActiveTab("general");
+    }
+
+    if (isBusinessMember && activeTab === "business") {
+      setActiveTab("general");
+    }
+  }, [activeTab, canManageBilling, isBusinessMember]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -796,7 +1154,7 @@ export default function AdminPage() {
     setSelectedUsedEmails([]);
   };
 
-  const handleBusinessEmailsSubmit = async () => {
+  const executeBusinessEmailsSubmit = async () => {
     if (!user) {
       return;
     }
@@ -815,20 +1173,6 @@ export default function AdminPage() {
 
       if (addedEmails.length === 0 && removedEmails.length === 0) {
         setBusinessNotice("No changes to save.");
-        return;
-      }
-
-      const summaryParts = [
-        addedEmails.length > 0 ? `${addedEmails.length} add` : null,
-        removedEmails.length > 0 ? `${removedEmails.length} remove` : null,
-      ].filter(Boolean);
-
-      if (
-        typeof window !== "undefined" &&
-        !window.confirm(
-          `Confirm business email update: ${summaryParts.join(", ")}.`
-        )
-      ) {
         return;
       }
 
@@ -852,13 +1196,12 @@ export default function AdminPage() {
       }
 
       for (const email of removedEmails) {
-        const response = await apiFetch("/users/me/business-users", {
+        const response = await apiFetch(
+          `/users/me/business-users?email=${encodeURIComponent(email)}`,
+          {
           method: "DELETE",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email }),
-        });
+          }
+        );
 
         if (!response.ok) {
           throw new Error(
@@ -868,9 +1211,13 @@ export default function AdminPage() {
             )
           );
         }
+
+        const data = (await response.json()) as StripeSubscriptionVM;
+        applyStripeSubscriptionState(data);
       }
 
       setBusinessNotice("Business emails updated.");
+      setBusinessEmailsConfirmText("");
       setPersistedUsedBusinessEmails(usedBusinessEmails);
       setUser((prev) => {
         if (!prev) {
@@ -895,7 +1242,197 @@ export default function AdminPage() {
           : "Unable to update business emails."
       );
     } finally {
+      closeDangerModal();
       setIsSavingBusinessEmails(false);
+    }
+  };
+
+  const handleBusinessEmailsSubmit = () => {
+    if (!user) {
+      return;
+    }
+
+    setBusinessNotice("");
+    setBusinessError("");
+
+    const addedEmails = usedBusinessEmails.filter(
+      (email) => !persistedUsedBusinessEmails.includes(email)
+    );
+    const removedEmails = persistedUsedBusinessEmails.filter(
+      (email) => !usedBusinessEmails.includes(email)
+    );
+
+    if (addedEmails.length === 0 && removedEmails.length === 0) {
+      setBusinessNotice("No changes to save.");
+      return;
+    }
+
+    const summaryParts = [
+      addedEmails.length > 0
+        ? `${addedEmails.length} email${addedEmails.length === 1 ? "" : "s"} added`
+        : null,
+      removedEmails.length > 0
+        ? `${removedEmails.length} email${removedEmails.length === 1 ? "" : "s"} removed`
+        : null,
+    ].filter(Boolean);
+
+    setBusinessEmailsConfirmText(
+      `Are you sure you want to save these business email changes? ${summaryParts.join(
+        " and "
+      )}.`
+    );
+    setPendingDangerAction("save-business-emails");
+  };
+
+  const handleOrganizationFieldChange = (
+    field: keyof OrganizationFormState,
+    value: string
+  ) => {
+    setOrganizationForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleStartOrganizationEdit = () => {
+    setOrganizationNotice("");
+    setOrganizationError("");
+    setIsEditingOrganization(true);
+  };
+
+  const handleCancelOrganizationEdit = () => {
+    setOrganizationNotice("");
+    setOrganizationError("");
+    setOrganizationForm(
+      organization
+        ? {
+            companyName: organization.companyName ?? "",
+            nip: organization.nip ?? "",
+            addressLine1: organization.addressLine1 ?? "",
+            addressLine2: organization.addressLine2 ?? "",
+            city: organization.city ?? "",
+            postalCode: organization.postalCode ?? "",
+            countryCode: organization.countryCode ?? "",
+            billingEmail: organization.billingEmail ?? "",
+          }
+        : emptyOrganizationForm
+    );
+    setIsEditingOrganization(false);
+  };
+
+  const handleOrganizationSave = async () => {
+    if (!user || !isBusinessOffer) {
+      return;
+    }
+
+    setIsSavingOrganization(true);
+    setOrganizationNotice("");
+    setOrganizationError("");
+
+    const payload: OrganizationFormState = {
+      companyName: organizationForm.companyName.trim(),
+      nip: organizationForm.nip.trim(),
+      addressLine1: organizationForm.addressLine1.trim(),
+      addressLine2: organizationForm.addressLine2.trim(),
+      city: organizationForm.city.trim(),
+      postalCode: organizationForm.postalCode.trim(),
+      countryCode: organizationForm.countryCode.trim().toUpperCase(),
+      billingEmail: normalizeEmail(organizationForm.billingEmail),
+    };
+
+    const requiredFields: Array<[keyof OrganizationFormState, string]> = [
+      ["companyName", "Company name"],
+      ["nip", "NIP"],
+      ["addressLine1", "Address line 1"],
+      ["city", "City"],
+      ["postalCode", "Postal code"],
+      ["countryCode", "Country code"],
+      ["billingEmail", "Billing email"],
+    ];
+
+    const missingField = requiredFields.find(([field]) => !payload[field]);
+
+    if (missingField) {
+      setOrganizationError(`${missingField[1]} is required.`);
+      setIsSavingOrganization(false);
+      return;
+    }
+
+    const lengthChecks: Array<[string, string, number]> = [
+      [payload.companyName, "Company name", 255],
+      [payload.nip, "NIP", 64],
+      [payload.addressLine1, "Address line 1", 255],
+      [payload.addressLine2, "Address line 2", 255],
+      [payload.city, "City", 128],
+      [payload.postalCode, "Postal code", 64],
+      [payload.countryCode, "Country code", 2],
+      [payload.billingEmail, "Billing email", 255],
+    ];
+
+    const invalidLength = lengthChecks.find(
+      ([value, , maxLength]) => !isReasonableLength(value, maxLength)
+    );
+
+    if (invalidLength) {
+      setOrganizationError(`${invalidLength[1]} is too long.`);
+      setIsSavingOrganization(false);
+      return;
+    }
+
+    const fieldsWithControlChars = [
+      payload.companyName,
+      payload.nip,
+      payload.addressLine1,
+      payload.addressLine2,
+      payload.city,
+      payload.postalCode,
+      payload.countryCode,
+      payload.billingEmail,
+    ];
+
+    if (fieldsWithControlChars.some((value) => hasControlChars(value))) {
+      setOrganizationError("Organization fields contain invalid characters.");
+      setIsSavingOrganization(false);
+      return;
+    }
+
+    if (!countryCodeRegex.test(payload.countryCode)) {
+      setOrganizationError("Country code must contain exactly two letters.");
+      setIsSavingOrganization(false);
+      return;
+    }
+
+    if (!emailRegex.test(payload.billingEmail)) {
+      setOrganizationError("Billing email format is invalid.");
+      setIsSavingOrganization(false);
+      return;
+    }
+
+    try {
+      const response = await apiFetch("/organizations/me", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error("Unable to update organization details.");
+      }
+
+      const data = (await response.json()) as OrganizationVM;
+      setOrganization(data);
+      setOrganizationNotice("Organization details updated.");
+      setIsEditingOrganization(false);
+    } catch (saveError) {
+      setOrganizationError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Unable to update organization details."
+      );
+    } finally {
+      setIsSavingOrganization(false);
     }
   };
 
@@ -1013,7 +1550,7 @@ export default function AdminPage() {
     setPendingDangerAction("delete-account");
   };
 
-  const handleAddWorkspace = async () => {
+  const executeAddWorkspace = async () => {
     setWorkspaceLimitNotice("");
     setWorkspaceLimitError("");
     setIsUpdatingWorkspaceLimit(true);
@@ -1040,6 +1577,7 @@ export default function AdminPage() {
 
       const data = (await response.json()) as StripeSubscriptionVM;
       applyStripeSubscriptionState(data);
+      setPendingDangerAction(null);
       setWorkspaceLimitNotice("Workspace limit increased.");
     } catch (workspaceError) {
       setWorkspaceLimitError(
@@ -1052,7 +1590,7 @@ export default function AdminPage() {
     }
   };
 
-  const handleRemoveWorkspace = async () => {
+  const executeRemoveWorkspace = async () => {
     setWorkspaceLimitNotice("");
     setWorkspaceLimitError("");
     setIsUpdatingWorkspaceLimit(true);
@@ -1075,6 +1613,7 @@ export default function AdminPage() {
 
       const data = (await response.json()) as StripeSubscriptionVM;
       applyStripeSubscriptionState(data);
+      setPendingDangerAction(null);
       setWorkspaceLimitNotice("Workspace limit reduced.");
     } catch (workspaceError) {
       setWorkspaceLimitError(
@@ -1087,15 +1626,121 @@ export default function AdminPage() {
     }
   };
 
+  const handleAddWorkspace = () => {
+    setWorkspaceLimitNotice("");
+    setWorkspaceLimitError("");
+    setPendingDangerAction("add-workspace");
+  };
+
+  const handleRemoveWorkspace = () => {
+    setWorkspaceLimitNotice("");
+    setWorkspaceLimitError("");
+    setPendingDangerAction("remove-workspace");
+  };
+
+  const executeAddBusinessSeat = async () => {
+    setBusinessSeatsNotice("");
+    setBusinessSeatsError("");
+    setIsUpdatingBusinessSeats(true);
+
+    try {
+      const response = await apiFetch("/stripe/subscriptions/business-seats", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ additionalSeats: 1 }),
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        setBusinessSeatsError(
+          "Your session could not be verified. Sign in again and retry."
+        );
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Unable to add a business seat.");
+      }
+
+      const data = (await response.json()) as StripeSubscriptionVM;
+      applyStripeSubscriptionState(data);
+      setPendingDangerAction(null);
+      setBusinessSeatsNotice("Business seat added.");
+    } catch (seatError) {
+      setBusinessSeatsError(
+        seatError instanceof Error
+          ? seatError.message
+          : "Unable to add a business seat."
+      );
+    } finally {
+      setIsUpdatingBusinessSeats(false);
+    }
+  };
+
+  const executeRemoveBusinessSeat = async () => {
+    setBusinessSeatsNotice("");
+    setBusinessSeatsError("");
+    setIsUpdatingBusinessSeats(true);
+
+    try {
+      const response = await apiFetch("/stripe/subscriptions/business-seats", {
+        method: "DELETE",
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        setBusinessSeatsError(
+          "Your session could not be verified. Sign in again and retry."
+        );
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Unable to remove a business seat.");
+      }
+
+      const data = (await response.json()) as StripeSubscriptionVM;
+      applyStripeSubscriptionState(data);
+      setPendingDangerAction(null);
+      setBusinessSeatsNotice("Business seat removed.");
+    } catch (seatError) {
+      setBusinessSeatsError(
+        seatError instanceof Error
+          ? seatError.message
+          : "Unable to remove a business seat."
+      );
+    } finally {
+      setIsUpdatingBusinessSeats(false);
+    }
+  };
+
+  const handleAddBusinessSeat = () => {
+    setBusinessSeatsNotice("");
+    setBusinessSeatsError("");
+    setPendingDangerAction("add-business-seat");
+  };
+
+  const handleRemoveBusinessSeat = () => {
+    setBusinessSeatsNotice("");
+    setBusinessSeatsError("");
+    setPendingDangerAction("remove-business-seat");
+  };
+
   const closeDangerModal = () => {
     if (isDeletingAccount) {
       return;
     }
 
-    if (isCancellingSubscription) {
+    if (
+      isCancellingSubscription ||
+      isUpdatingWorkspaceLimit ||
+      isSavingBusinessEmails ||
+      isUpdatingBusinessSeats
+    ) {
       return;
     }
 
+    setBusinessEmailsConfirmText("");
     setPendingDangerAction(null);
   };
 
@@ -1187,12 +1832,14 @@ export default function AdminPage() {
             onClick={() => setActiveTab("general")}>
             General information
           </TabButton>
-          <TabButton
-            isActive={activeTab === "payments"}
-            onClick={() => setActiveTab("payments")}>
-            Payments
-          </TabButton>
-          {isBusinessOffer ? (
+          {canManageBilling ? (
+            <TabButton
+              isActive={activeTab === "payments"}
+              onClick={() => setActiveTab("payments")}>
+              Payments
+            </TabButton>
+          ) : null}
+          {isBusinessOffer && !isBusinessMember ? (
             <TabButton
               isActive={activeTab === "business"}
               onClick={() => setActiveTab("business")}>
@@ -1290,40 +1937,42 @@ export default function AdminPage() {
                         Account details
                       </h3>
                       <DetailList items={profileDetails} />
-                      <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
-                        <p className="text-xs uppercase tracking-wide text-white/60">
-                          Workspace limit
-                        </p>
-                        <p className="mt-1 text-white">
-                          {formatValue(user?.workspaceLimit ?? null)}
-                        </p>
-                        <div className="mt-4 flex flex-wrap gap-3">
-                          <button
-                            type="button"
-                            onClick={handleAddWorkspace}
-                            disabled={isUpdatingWorkspaceLimit}
-                            className="rounded-full bg-indigo-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-60">
-                            Add workspace
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleRemoveWorkspace}
-                            disabled={isUpdatingWorkspaceLimit}
-                            className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white transition hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-60">
-                            Remove workspace
-                          </button>
-                        </div>
-                        {workspaceLimitNotice ? (
-                          <p className="mt-3 text-xs text-emerald-200">
-                            {workspaceLimitNotice}
+                      {canManageBilling ? (
+                        <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                          <p className="text-xs uppercase tracking-wide text-white/60">
+                            Workspace limit
                           </p>
-                        ) : null}
-                        {workspaceLimitError ? (
-                          <Notice tone="error" className="mt-3">
-                            {workspaceLimitError}
-                          </Notice>
-                        ) : null}
-                      </div>
+                          <p className="mt-1 text-white">
+                            {formatValue(user?.workspaceLimit ?? null)}
+                          </p>
+                          <div className="mt-4 flex flex-wrap gap-3">
+                            <button
+                              type="button"
+                              onClick={handleAddWorkspace}
+                              disabled={isUpdatingWorkspaceLimit}
+                              className="rounded-full bg-indigo-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-60">
+                              Add workspace
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleRemoveWorkspace}
+                              disabled={isUpdatingWorkspaceLimit}
+                              className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white transition hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-60">
+                              Remove workspace
+                            </button>
+                          </div>
+                          {workspaceLimitNotice ? (
+                            <p className="mt-3 text-xs text-emerald-200">
+                              {workspaceLimitNotice}
+                            </p>
+                          ) : null}
+                          {workspaceLimitError ? (
+                            <Notice tone="error" className="mt-3">
+                              {workspaceLimitError}
+                            </Notice>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </div>
 
                     <div className="mt-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 p-4">
@@ -1337,12 +1986,14 @@ export default function AdminPage() {
                         </p>
                       </div>
                       <div className="mt-4 flex flex-wrap gap-3">
-                        <button
-                          type="button"
-                          onClick={handleCancelSubscription}
-                          className="rounded-full border border-rose-300/40 px-4 py-2 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/10">
-                          Cancel subscription
-                        </button>
+                        {canManageBilling ? (
+                          <button
+                            type="button"
+                            onClick={handleCancelSubscription}
+                            className="rounded-full border border-rose-300/40 px-4 py-2 text-xs font-semibold text-rose-100 transition hover:bg-rose-500/10">
+                            Cancel subscription
+                          </button>
+                        ) : null}
                         <button
                           type="button"
                           onClick={handleDeleteAccount}
@@ -1375,13 +2026,250 @@ export default function AdminPage() {
                     <h3 className="text-sm font-semibold text-white">
                       Business details
                     </h3>
+                    <div className={`mt-3 ${ui.subCard}`}>
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-xs uppercase tracking-wide text-white/60">
+                            Current business seats
+                          </p>
+                          <p className="mt-1 text-lg font-semibold text-white">
+                            {formatValue(currentRegularUserSeats)}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-3">
+                          <button
+                            type="button"
+                            onClick={handleAddBusinessSeat}
+                            disabled={isUpdatingBusinessSeats}
+                            className="rounded-full bg-indigo-500 px-4 py-2 text-xs font-semibold text-white transition hover:bg-indigo-400 disabled:cursor-not-allowed disabled:opacity-60">
+                            Add seat
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleRemoveBusinessSeat}
+                            disabled={isUpdatingBusinessSeats}
+                            className="rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white transition hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-60">
+                            Remove seat
+                          </button>
+                        </div>
+                      </div>
+                      {businessSeatsNotice ? (
+                        <p className="mt-3 text-xs text-emerald-200">
+                          {businessSeatsNotice}
+                        </p>
+                      ) : null}
+                      {businessSeatsError ? (
+                        <Notice tone="error" className="mt-3">
+                          {businessSeatsError}
+                        </Notice>
+                      ) : null}
+                    </div>
                     {businessDetails.length > 0 ? (
-                      <DetailList items={businessDetails} />
+                      <div className="mt-6">
+                        <DetailList items={businessDetails} />
+                      </div>
                     ) : (
-                      <div className={`mt-3 ${ui.emptyCard}`}>
+                      <div className={`mt-6 ${ui.emptyCard}`}>
                         No business details available.
                       </div>
                     )}
+                    <div className={`mt-6 ${ui.subCard}`}>
+                      <div className="flex items-center justify-between gap-3">
+                        <h4 className="text-sm font-semibold text-white">
+                          Organization details
+                        </h4>
+                        {isLoadingOrganization ? (
+                          <span className="text-xs text-white/60">Loading...</span>
+                        ) : organization ? (
+                          <button
+                            type="button"
+                            onClick={
+                              isEditingOrganization
+                                ? handleCancelOrganizationEdit
+                                : handleStartOrganizationEdit
+                            }
+                            className={ui.secondaryButton}>
+                            {isEditingOrganization ? "Cancel" : "Edit"}
+                          </button>
+                        ) : null}
+                      </div>
+                      {organizationDetails.length > 0 && !isEditingOrganization ? (
+                        <div className="mt-4">
+                          <DetailList items={organizationDetails} />
+                        </div>
+                      ) : organization && isEditingOrganization ? (
+                        <>
+                          <div className="mt-4 grid gap-4 md:grid-cols-2">
+                            <div>
+                              <label className="text-sm font-medium text-white">
+                                Company name
+                              </label>
+                              <input
+                                type="text"
+                                value={organizationForm.companyName}
+                                onChange={(event) =>
+                                  handleOrganizationFieldChange(
+                                    "companyName",
+                                    event.target.value
+                                  )
+                                }
+                                maxLength={255}
+                                className={ui.input}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-white">
+                                NIP
+                              </label>
+                              <input
+                                type="text"
+                                value={organizationForm.nip}
+                                onChange={(event) =>
+                                  handleOrganizationFieldChange(
+                                    "nip",
+                                    event.target.value
+                                  )
+                                }
+                                maxLength={64}
+                                className={ui.input}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-white">
+                                Address line 1
+                              </label>
+                              <input
+                                type="text"
+                                value={organizationForm.addressLine1}
+                                onChange={(event) =>
+                                  handleOrganizationFieldChange(
+                                    "addressLine1",
+                                    event.target.value
+                                  )
+                                }
+                                maxLength={255}
+                                className={ui.input}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-white">
+                                Address line 2
+                              </label>
+                              <input
+                                type="text"
+                                value={organizationForm.addressLine2}
+                                onChange={(event) =>
+                                  handleOrganizationFieldChange(
+                                    "addressLine2",
+                                    event.target.value
+                                  )
+                                }
+                                maxLength={255}
+                                className={ui.input}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-white">
+                                City
+                              </label>
+                              <input
+                                type="text"
+                                value={organizationForm.city}
+                                onChange={(event) =>
+                                  handleOrganizationFieldChange(
+                                    "city",
+                                    event.target.value
+                                  )
+                                }
+                                maxLength={128}
+                                className={ui.input}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-white">
+                                Postal code
+                              </label>
+                              <input
+                                type="text"
+                                value={organizationForm.postalCode}
+                                onChange={(event) =>
+                                  handleOrganizationFieldChange(
+                                    "postalCode",
+                                    event.target.value
+                                  )
+                                }
+                                maxLength={64}
+                                className={ui.input}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-white">
+                                Country code
+                              </label>
+                              <input
+                                type="text"
+                                value={organizationForm.countryCode}
+                                onChange={(event) =>
+                                  handleOrganizationFieldChange(
+                                    "countryCode",
+                                    event.target.value.toUpperCase()
+                                  )
+                                }
+                                maxLength={2}
+                                className={ui.input}
+                              />
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-white">
+                                Billing email
+                              </label>
+                              <input
+                                type="email"
+                                value={organizationForm.billingEmail}
+                                onChange={(event) =>
+                                  handleOrganizationFieldChange(
+                                    "billingEmail",
+                                    event.target.value
+                                  )
+                                }
+                                maxLength={255}
+                                className={ui.input}
+                              />
+                            </div>
+                          </div>
+                          <div className="mt-4 flex flex-wrap items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={handleOrganizationSave}
+                              disabled={isSavingOrganization || isLoadingOrganization}
+                              className={ui.primaryButton}>
+                              {isSavingOrganization ? "Saving..." : "Save changes"}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleCancelOrganizationEdit}
+                              disabled={isSavingOrganization}
+                              className={ui.secondaryButton}>
+                              Cancel
+                            </button>
+                            {organizationNotice ? (
+                              <span className="text-xs font-medium text-emerald-200">
+                                {organizationNotice}
+                              </span>
+                            ) : null}
+                          </div>
+                        </>
+                      ) : (
+                        <div className={`mt-4 ${ui.emptyCard}`}>
+                          No organization details available.
+                        </div>
+                      )}
+                      {organizationError ? (
+                        <Notice tone="error" className="mt-4">
+                          {organizationError}
+                        </Notice>
+                      ) : null}
+                    </div>
                     <div className={`mt-6 ${ui.subCard}`}>
                       <h4 className="text-sm font-semibold text-white">
                         Business user emails
@@ -1704,6 +2592,82 @@ export default function AdminPage() {
         isProcessing={isDeletingAccount}
         onCancel={closeDangerModal}
         onConfirm={executeDeleteAccount}
+      />
+      <DangerConfirmModal
+        isOpen={pendingDangerAction === "add-workspace"}
+        eyebrow="Workspace update"
+        title="Add one workspace"
+        description={
+          workspacePriceText
+            ? `Are you sure you want to add one workspace? This workspace will cost ${workspacePriceText}. You can find how much you currently pay in Payments -> Current amount.`
+            : "Are you sure you want to add one workspace? You can find how much you currently pay in Payments -> Current amount."
+        }
+        confirmLabel="Add workspace"
+        accent="success"
+        cancelLabel="Not now"
+        isProcessing={isUpdatingWorkspaceLimit}
+        onCancel={closeDangerModal}
+        onConfirm={executeAddWorkspace}
+      />
+      <DangerConfirmModal
+        isOpen={pendingDangerAction === "remove-workspace"}
+        eyebrow="Workspace update"
+        title="Remove one workspace"
+        description={
+          workspacePriceText
+            ? `Are you sure you want to remove one workspace? This removes the workspace priced at ${workspacePriceText}. You can find how much you currently pay in Payments -> Current amount.`
+            : "Are you sure you want to remove one workspace? You can find how much you currently pay in Payments -> Current amount."
+        }
+        confirmLabel="Remove workspace"
+        accent="success"
+        cancelLabel="Keep current limit"
+        isProcessing={isUpdatingWorkspaceLimit}
+        onCancel={closeDangerModal}
+        onConfirm={executeRemoveWorkspace}
+      />
+      <DangerConfirmModal
+        isOpen={pendingDangerAction === "save-business-emails"}
+        eyebrow="Business update"
+        title="Save business emails"
+        description={businessEmailsConfirmText}
+        confirmLabel="Save changes"
+        accent="success"
+        cancelLabel="Not now"
+        isProcessing={isSavingBusinessEmails}
+        onCancel={closeDangerModal}
+        onConfirm={executeBusinessEmailsSubmit}
+      />
+      <DangerConfirmModal
+        isOpen={pendingDangerAction === "add-business-seat"}
+        eyebrow="Business update"
+        title="Add one business seat"
+        description={
+          businessSeatPriceText
+            ? `Are you sure you want to add one business seat to this subscription? This seat will cost ${businessSeatPriceText}.`
+            : "Are you sure you want to add one business seat to this subscription?"
+        }
+        confirmLabel="Add seat"
+        accent="success"
+        cancelLabel="Not now"
+        isProcessing={isUpdatingBusinessSeats}
+        onCancel={closeDangerModal}
+        onConfirm={executeAddBusinessSeat}
+      />
+      <DangerConfirmModal
+        isOpen={pendingDangerAction === "remove-business-seat"}
+        eyebrow="Business update"
+        title="Remove one business seat"
+        description={
+          businessSeatPriceText
+            ? `Are you sure you want to remove one business seat from this subscription? This removes the seat priced at ${businessSeatPriceText}.`
+            : "Are you sure you want to remove one business seat from this subscription?"
+        }
+        confirmLabel="Remove seat"
+        accent="success"
+        cancelLabel="Keep current seats"
+        isProcessing={isUpdatingBusinessSeats}
+        onCancel={closeDangerModal}
+        onConfirm={executeRemoveBusinessSeat}
       />
     </div>
   );
