@@ -70,6 +70,19 @@ type OrganizationVM = {
   updatedAt: string | null;
 };
 
+type BusinessOrganizationVM = {
+  id?: number;
+  companyName?: string | null;
+};
+
+type BusinessUserVM = {
+  id: number;
+  email: string;
+  defaultLanguage: string | null;
+  handledWorkspaces: SlackWorkspaceVM[];
+  organization?: BusinessOrganizationVM | null;
+};
+
 type StripeSubscriptionVM = {
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
@@ -525,6 +538,19 @@ export default function AdminPage() {
   const [businessNotice, setBusinessNotice] = useState("");
   const [businessError, setBusinessError] = useState("");
   const [businessEmailsConfirmText, setBusinessEmailsConfirmText] = useState("");
+  const [memberLanguageDrafts, setMemberLanguageDrafts] = useState<
+    Record<string, string>
+  >({});
+  const [businessUsers, setBusinessUsers] = useState<BusinessUserVM[]>([]);
+  const [isLoadingBusinessUsers, setIsLoadingBusinessUsers] = useState(false);
+  const [isSavingMemberLanguage, setIsSavingMemberLanguage] = useState<
+    Record<string, boolean>
+  >({});
+  const [isUpdatingMemberWorkspace, setIsUpdatingMemberWorkspace] = useState<
+    Record<string, boolean>
+  >({});
+  const [memberManagementNotice, setMemberManagementNotice] = useState("");
+  const [memberManagementError, setMemberManagementError] = useState("");
   const [isUpdatingBusinessSeats, setIsUpdatingBusinessSeats] = useState(false);
   const [businessSeatsNotice, setBusinessSeatsNotice] = useState("");
   const [businessSeatsError, setBusinessSeatsError] = useState("");
@@ -631,6 +657,10 @@ export default function AdminPage() {
       setUsedBusinessEmails([]);
       setSelectedAvailableEmails([]);
       setSelectedUsedEmails([]);
+      setMemberLanguageDrafts({});
+      setBusinessUsers([]);
+      setMemberManagementNotice("");
+      setMemberManagementError("");
       return;
     }
 
@@ -650,6 +680,8 @@ export default function AdminPage() {
     setAvailableEmailDraft("");
     setBusinessNotice("");
     setBusinessError("");
+    setMemberManagementNotice("");
+    setMemberManagementError("");
   }, [user]);
 
   const canAddToSlack =
@@ -728,6 +760,87 @@ export default function AdminPage() {
     };
   }, [isBusinessOffer, userId]);
 
+  const loadBusinessUsers = async () => {
+    const response = await apiFetch("/users/me/business-users");
+
+    if (!response.ok) {
+      throw new Error("Unable to load business users.");
+    }
+
+    const data = (await response.json()) as BusinessUserVM[];
+
+    setBusinessUsers(Array.isArray(data) ? data : []);
+    setMemberLanguageDrafts(
+      (Array.isArray(data) ? data : []).reduce<Record<string, string>>(
+        (accumulator, member) => {
+          accumulator[String(member.id)] = member.defaultLanguage ?? "";
+          return accumulator;
+        },
+        {}
+      )
+    );
+  };
+
+  useEffect(() => {
+    if (!isBusinessAdmin) {
+      setBusinessUsers([]);
+      setMemberLanguageDrafts({});
+      setMemberManagementNotice("");
+      setMemberManagementError("");
+      return;
+    }
+
+    let isMounted = true;
+
+    const run = async () => {
+      setIsLoadingBusinessUsers(true);
+      setMemberManagementError("");
+
+      try {
+        const response = await apiFetch("/users/me/business-users");
+
+        if (!response.ok) {
+          throw new Error("Unable to load business users.");
+        }
+
+        const data = (await response.json()) as BusinessUserVM[];
+
+        if (!isMounted) {
+          return;
+        }
+
+        setBusinessUsers(Array.isArray(data) ? data : []);
+        setMemberLanguageDrafts(
+          (Array.isArray(data) ? data : []).reduce<Record<string, string>>(
+            (accumulator, member) => {
+              accumulator[String(member.id)] = member.defaultLanguage ?? "";
+              return accumulator;
+            },
+            {}
+          )
+        );
+      } catch (loadError) {
+        if (isMounted) {
+          setMemberManagementError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Unable to load business users."
+          );
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingBusinessUsers(false);
+        }
+      }
+    };
+
+    void run();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isBusinessAdmin]);
+
   const currentBillingInterval = getBillingIntervalFromDates(
     user?.subscriptionStartedAt ?? null,
     user?.nextBillingAt ?? null
@@ -803,6 +916,18 @@ export default function AdminPage() {
       { label: "Updated at", value: formatDateTime(organization.updatedAt) },
     ];
   }, [organization]);
+
+  const businessMemberRows = useMemo(
+    () =>
+      businessUsers.map((member) => ({
+        id: member.id,
+        email: member.email,
+        workspaceUsed: member.handledWorkspaces?.length ?? 0,
+        defaultLanguage: memberLanguageDrafts[String(member.id)] ?? "",
+        handledWorkspaces: member.handledWorkspaces ?? [],
+      })),
+    [businessUsers, memberLanguageDrafts]
+  );
 
   const billingDetails = useMemo(() => {
     if (!user) {
@@ -1294,6 +1419,131 @@ export default function AdminPage() {
     }));
   };
 
+  const handleMemberLanguageDraftChange = (email: string, value: string) => {
+    setMemberLanguageDrafts((prev) => ({
+      ...prev,
+      [email]: value,
+    }));
+  };
+
+  const handleMemberLanguageSave = async (memberId: number) => {
+    const draft = memberLanguageDrafts[String(memberId)] ?? "";
+
+    setMemberManagementNotice("");
+    setMemberManagementError("");
+
+    if (!draft) {
+      setMemberManagementError("Select a default language before saving.");
+      return;
+    }
+
+    if (!isReasonableLength(draft, LANGUAGE_MAX_LENGTH) || hasControlChars(draft)) {
+      setMemberManagementError("Default language contains invalid characters.");
+      return;
+    }
+
+    setIsSavingMemberLanguage((prev) => ({ ...prev, [String(memberId)]: true }));
+
+    try {
+      const response = await apiFetch(`/users/me/business-users/${memberId}/language`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ defaultLanguage: draft }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Unable to update the business user language.");
+      }
+
+      const data = (await response.json()) as BusinessUserVM;
+      setBusinessUsers((prev) =>
+        prev.map((member) => (member.id === memberId ? data : member))
+      );
+      setMemberManagementNotice("Business user language updated.");
+    } catch (saveError) {
+      setMemberManagementError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Unable to update the business user language."
+      );
+    } finally {
+      setIsSavingMemberLanguage((prev) => ({
+        ...prev,
+        [String(memberId)]: false,
+      }));
+    }
+  };
+
+  const handleMemberWorkspaceAdd = async (memberId: number) => {
+    setMemberManagementNotice("");
+    setMemberManagementError("");
+
+    setIsUpdatingMemberWorkspace((prev) => ({ ...prev, [String(memberId)]: true }));
+
+    try {
+      const response = await apiFetch(
+        `/stripe/subscriptions/business-users/${memberId}/workspace`,
+        {
+          method: "PATCH",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Unable to add a workspace for this business user.");
+      }
+
+      await loadBusinessUsers();
+      setMemberManagementNotice("Workspace added to the business user.");
+    } catch (saveError) {
+      setMemberManagementError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Unable to add a workspace for this business user."
+      );
+    } finally {
+      setIsUpdatingMemberWorkspace((prev) => ({
+        ...prev,
+        [String(memberId)]: false,
+      }));
+    }
+  };
+
+  const handleMemberWorkspaceRemove = async (memberId: number) => {
+    setMemberManagementNotice("");
+    setMemberManagementError("");
+
+    setIsUpdatingMemberWorkspace((prev) => ({ ...prev, [String(memberId)]: true }));
+
+    try {
+      const response = await apiFetch(
+        `/stripe/subscriptions/business-users/${memberId}/workspace`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Unable to remove a workspace for this business user.");
+      }
+
+      await loadBusinessUsers();
+      setMemberManagementNotice("Workspace removed from the business user.");
+    } catch (saveError) {
+      setMemberManagementError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Unable to remove a workspace for this business user."
+      );
+    } finally {
+      setIsUpdatingMemberWorkspace((prev) => ({
+        ...prev,
+        [String(memberId)]: false,
+      }));
+    }
+  };
+
   const handleStartOrganizationEdit = () => {
     setOrganizationNotice("");
     setOrganizationError("");
@@ -1554,9 +1804,12 @@ export default function AdminPage() {
     setWorkspaceLimitNotice("");
     setWorkspaceLimitError("");
     setIsUpdatingWorkspaceLimit(true);
+    const workspaceEndpoint = isBusinessAdmin
+      ? "/stripe/subscriptions/business-workspaces"
+      : "/stripe/subscriptions/workspaces";
 
     try {
-      const response = await apiFetch("/stripe/subscriptions/workspaces", {
+      const response = await apiFetch(workspaceEndpoint, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -1594,9 +1847,12 @@ export default function AdminPage() {
     setWorkspaceLimitNotice("");
     setWorkspaceLimitError("");
     setIsUpdatingWorkspaceLimit(true);
+    const workspaceEndpoint = isBusinessAdmin
+      ? "/stripe/subscriptions/business-workspaces"
+      : "/stripe/subscriptions/workspaces";
 
     try {
-      const response = await apiFetch("/stripe/subscriptions/workspaces", {
+      const response = await apiFetch(workspaceEndpoint, {
         method: "DELETE",
       });
 
@@ -2074,6 +2330,250 @@ export default function AdminPage() {
                       </div>
                     )}
                     <div className={`mt-6 ${ui.subCard}`}>
+                      <h4 className="text-sm font-semibold text-white">
+                        Business user emails
+                      </h4>
+                      <p className="mt-1 text-xs text-white/60">
+                        Assign emails with arrows like Salesforce dual listbox.
+                        Left side is remove list, right side is used list.
+                      </p>
+
+                      <div className="mt-4">
+                        <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-white/60">
+                          Add available emails (one per line)
+                        </label>
+                        <textarea
+                          value={availableEmailDraft}
+                          onChange={(event) => setAvailableEmailDraft(event.target.value)}
+                          rows={4}
+                          maxLength={EMAIL_LIST_TEXT_MAX_LENGTH}
+                          placeholder={"user1@example.com\nuser2@example.com"}
+                          className={ui.textarea}
+                        />
+                        <div className="mt-3">
+                          <button
+                            type="button"
+                            onClick={handleAddAvailableEmails}
+                            className={ui.secondaryButton}>
+                            Add to used
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
+                        <div>
+                          <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-white/60">
+                            Remove emails
+                          </label>
+                          <select
+                            multiple
+                            value={selectedAvailableEmails}
+                            onChange={(event) =>
+                              setSelectedAvailableEmails(
+                                Array.from(event.target.selectedOptions).map(
+                                  (option) => option.value
+                                )
+                              )
+                            }
+                            className={ui.multiSelect}>
+                            {availableBusinessEmails.map((email) => (
+                              <option key={`available-${email}`} value={email}>
+                                {email}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="flex flex-row justify-center gap-2 lg:flex-col">
+                          <button
+                            type="button"
+                            onClick={moveEmailsToUsed}
+                            disabled={selectedAvailableEmails.length === 0}
+                            className={ui.iconButton}>
+                            &gt;
+                          </button>
+                          <button
+                            type="button"
+                            onClick={moveEmailsToAvailable}
+                            disabled={selectedUsedEmails.length === 0}
+                            className={ui.iconButton}>
+                            &lt;
+                          </button>
+                        </div>
+
+                        <div>
+                          <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-white/60">
+                            Used emails
+                          </label>
+                          <select
+                            multiple
+                            value={selectedUsedEmails}
+                            onChange={(event) =>
+                              setSelectedUsedEmails(
+                                Array.from(event.target.selectedOptions).map(
+                                  (option) => option.value
+                                )
+                              )
+                            }
+                            className={ui.multiSelect}>
+                            {usedBusinessEmails.map((email) => (
+                              <option key={`used-${email}`} value={email}>
+                                {email}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={handleBusinessEmailsSubmit}
+                          disabled={isSavingBusinessEmails}
+                          className={ui.primaryButton}>
+                          {isSavingBusinessEmails ? "Submitting..." : "Submit"}
+                        </button>
+                        {businessNotice ? (
+                          <span className="text-xs font-medium text-emerald-200">
+                            {businessNotice}
+                          </span>
+                        ) : null}
+                      </div>
+                      {businessError ? (
+                        <Notice tone="error" className="mt-3">
+                          {businessError}
+                        </Notice>
+                      ) : null}
+                    </div>
+                    {isBusinessAdmin ? (
+                      <div className={`mt-6 ${ui.subCard}`}>
+                        <div className="flex items-center justify-between gap-3">
+                          <h4 className="text-sm font-semibold text-white">
+                            Business members
+                          </h4>
+                          {isLoadingBusinessUsers ? (
+                            <span className="text-xs text-white/60">Loading...</span>
+                          ) : null}
+                        </div>
+                        <p className="mt-1 text-xs text-white/60">
+                          Manage each business user workspace and default language.
+                        </p>
+                        {businessMemberRows.length > 0 ? (
+                          <div className="mt-4 space-y-3">
+                            {businessMemberRows.map((member) => (
+                              <div
+                                key={member.id}
+                                className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
+                                <div className="grid gap-4 lg:grid-cols-[1.5fr_0.7fr_1.1fr_1fr] lg:items-end">
+                                  <div>
+                                    <p className="text-xs uppercase tracking-wide text-white/60">
+                                      User email
+                                    </p>
+                                    <p className="mt-1 text-sm font-medium text-white">
+                                      {member.email}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs uppercase tracking-wide text-white/60">
+                                      Workspaces
+                                    </p>
+                                    <p className="mt-1 text-sm text-white">
+                                      {member.workspaceUsed}
+                                    </p>
+                                  </div>
+                                  <div>
+                                    <label className="text-xs uppercase tracking-wide text-white/60">
+                                      Default language
+                                    </label>
+                                    <select
+                                      value={member.defaultLanguage}
+                                      onChange={(event) =>
+                                        handleMemberLanguageDraftChange(
+                                          String(member.id),
+                                          event.target.value
+                                        )
+                                      }
+                                      className={ui.select}>
+                                      <option value="">Select a language</option>
+                                      {languages.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                          {option.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleMemberLanguageSave(member.id)}
+                                      disabled={Boolean(
+                                        isSavingMemberLanguage[String(member.id)]
+                                      )}
+                                      className="mt-3 w-full rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold text-white transition hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-60">
+                                      {isSavingMemberLanguage[String(member.id)]
+                                        ? "Saving..."
+                                        : "Save language"}
+                                    </button>
+                                  </div>
+                                  <div className="flex flex-col gap-3 lg:pb-[2px]">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleMemberWorkspaceAdd(member.id)}
+                                      disabled={Boolean(
+                                        isUpdatingMemberWorkspace[String(member.id)]
+                                      )}
+                                      className={ui.secondaryButton}>
+                                      {isUpdatingMemberWorkspace[String(member.id)]
+                                        ? "Updating..."
+                                        : "Add workspace"}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        handleMemberWorkspaceRemove(member.id)
+                                      }
+                                      disabled={Boolean(
+                                        isUpdatingMemberWorkspace[String(member.id)]
+                                      )}
+                                      className={ui.secondaryButton}>
+                                      {isUpdatingMemberWorkspace[String(member.id)]
+                                        ? "Updating..."
+                                        : "Remove workspace"}
+                                    </button>
+                                  </div>
+                                </div>
+                                {member.handledWorkspaces.length > 0 ? (
+                                  <div className="mt-3 flex flex-wrap gap-2">
+                                    {member.handledWorkspaces.map((workspace) => (
+                                      <span
+                                        key={`${member.id}-${workspace.code}`}
+                                        className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/70">
+                                        {workspace.name}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : null}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className={`mt-4 ${ui.emptyCard}`}>
+                            {isLoadingBusinessUsers
+                              ? "Loading business members..."
+                              : "No business members available yet."}
+                          </div>
+                        )}
+                        {memberManagementNotice ? (
+                          <p className="mt-3 text-xs text-amber-200">
+                            {memberManagementNotice}
+                          </p>
+                        ) : null}
+                        {memberManagementError ? (
+                          <Notice tone="error" className="mt-3">
+                            {memberManagementError}
+                          </Notice>
+                        ) : null}
+                      </div>
+                    ) : null}
+                    <div className={`mt-6 ${ui.subCard}`}>
                       <div className="flex items-center justify-between gap-3">
                         <h4 className="text-sm font-semibold text-white">
                           Organization details
@@ -2267,122 +2767,6 @@ export default function AdminPage() {
                       {organizationError ? (
                         <Notice tone="error" className="mt-4">
                           {organizationError}
-                        </Notice>
-                      ) : null}
-                    </div>
-                    <div className={`mt-6 ${ui.subCard}`}>
-                      <h4 className="text-sm font-semibold text-white">
-                        Business user emails
-                      </h4>
-                      <p className="mt-1 text-xs text-white/60">
-                        Assign emails with arrows like Salesforce dual listbox.
-                        Left side is remove list, right side is used list.
-                      </p>
-
-                      <div className="mt-4">
-                        <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-white/60">
-                          Add available emails (one per line)
-                        </label>
-                        <textarea
-                          value={availableEmailDraft}
-                          onChange={(event) => setAvailableEmailDraft(event.target.value)}
-                          rows={4}
-                          maxLength={EMAIL_LIST_TEXT_MAX_LENGTH}
-                          placeholder={"user1@example.com\nuser2@example.com"}
-                          className={ui.textarea}
-                        />
-                        <div className="mt-3">
-                          <button
-                            type="button"
-                            onClick={handleAddAvailableEmails}
-                            className={ui.secondaryButton}>
-                            Add to used
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_auto_1fr] lg:items-center">
-                        <div>
-                          <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-white/60">
-                            Remove emails
-                          </label>
-                          <select
-                            multiple
-                            value={selectedAvailableEmails}
-                            onChange={(event) =>
-                              setSelectedAvailableEmails(
-                                Array.from(event.target.selectedOptions).map(
-                                  (option) => option.value
-                                )
-                              )
-                            }
-                            className={ui.multiSelect}>
-                            {availableBusinessEmails.map((email) => (
-                              <option key={`available-${email}`} value={email}>
-                                {email}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div className="flex flex-row justify-center gap-2 lg:flex-col">
-                          <button
-                            type="button"
-                            onClick={moveEmailsToUsed}
-                            disabled={selectedAvailableEmails.length === 0}
-                            className={ui.iconButton}>
-                            &gt;
-                          </button>
-                          <button
-                            type="button"
-                            onClick={moveEmailsToAvailable}
-                            disabled={selectedUsedEmails.length === 0}
-                            className={ui.iconButton}>
-                            &lt;
-                          </button>
-                        </div>
-
-                        <div>
-                          <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-white/60">
-                            Used emails
-                          </label>
-                          <select
-                            multiple
-                            value={selectedUsedEmails}
-                            onChange={(event) =>
-                              setSelectedUsedEmails(
-                                Array.from(event.target.selectedOptions).map(
-                                  (option) => option.value
-                                )
-                              )
-                            }
-                            className={ui.multiSelect}>
-                            {usedBusinessEmails.map((email) => (
-                              <option key={`used-${email}`} value={email}>
-                                {email}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 flex flex-wrap items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={handleBusinessEmailsSubmit}
-                          disabled={isSavingBusinessEmails}
-                          className={ui.primaryButton}>
-                          {isSavingBusinessEmails ? "Submitting..." : "Submit"}
-                        </button>
-                        {businessNotice ? (
-                          <span className="text-xs font-medium text-emerald-200">
-                            {businessNotice}
-                          </span>
-                        ) : null}
-                      </div>
-                      {businessError ? (
-                        <Notice tone="error" className="mt-3">
-                          {businessError}
                         </Notice>
                       ) : null}
                     </div>
