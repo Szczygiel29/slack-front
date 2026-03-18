@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 import { apiFetch } from "../../../lib/api";
 
@@ -21,7 +21,7 @@ const slackOauthMessages: Record<SlackOauthErrorCode, string> = {
     "Slack connection is temporarily unavailable. Try again in a moment.",
 };
 
-export default function SlackConnectedPage() {
+function SlackConnectedPageContent() {
   const searchParams = useSearchParams();
   const [authState, setAuthState] = useState<AuthState>("loading");
 
@@ -118,5 +118,13 @@ export default function SlackConnectedPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SlackConnectedPage() {
+  return (
+    <Suspense fallback={null}>
+      <SlackConnectedPageContent />
+    </Suspense>
   );
 }
