@@ -2,15 +2,14 @@ import { fetchJSON } from "./api";
 import type { BillingInterval, OfferPlanResponse } from "../types";
 
 export const formatUsdPrice = (price: number | null | undefined) => {
-  if (!Number.isFinite(price)) {
-    return "$0";
-  }
+  const normalizedPrice =
+    typeof price === "number" && Number.isFinite(price) ? price : 0;
 
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     maximumFractionDigits: 2,
-  }).format(price);
+  }).format(normalizedPrice);
 };
 
 export const getOfferBillingInterval = (
