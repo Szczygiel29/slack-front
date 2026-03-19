@@ -14,18 +14,18 @@ export type BlogPost = {
 
 export const blogPosts: BlogPost[] = [
   {
-    slug: "slackmate-launch",
-    title: "Slackmate is live: one app for digest, follow-up, and thread actions",
+    slug: "threadoai-launch",
+    title: "ThreadoAI is live: one app for digest, follow-up, and thread actions",
     description:
-      "Slackmate is now available for teams that want better thread execution in Slack without adding extra tools.",
+      "ThreadoAI is now available for teams that want better thread execution in Slack without adding extra tools.",
     readTime: "5 min read",
     category: "Product Launch",
     publishedAt: "March 6, 2026",
     sections: [
       {
-        heading: "What Slackmate does",
+        heading: "What ThreadoAI does",
         content:
-          "Slackmate helps teams run thread workflows from signal to action: digest, follow-up reminders, task extraction, summaries, translations, and approved replies.",
+          "ThreadoAI helps teams run thread workflows from signal to action: digest, follow-up reminders, task extraction, summaries, translations, and approved replies.",
       },
       {
         heading: "Core features available now",
@@ -35,11 +35,11 @@ export const blogPosts: BlogPost[] = [
       {
         heading: "Why this launch matters",
         content:
-          "Most teams lose context across busy threads. Slackmate reduces missed responses, makes ownership clearer, and keeps team decisions visible for future work.",
+          "Most teams lose context across busy threads. ThreadoAI reduces missed responses, makes ownership clearer, and keeps team decisions visible for future work.",
       },
     ],
     highlight:
-      "Slackmate launch focus: automate routine thread operations while keeping final messaging and ownership under team control.",
+      "ThreadoAI launch focus: automate routine thread operations while keeping final messaging and ownership under team control.",
   },
 ];
 

@@ -231,7 +231,7 @@ export default function Home() {
               S
             </div>
             <span className="text-lg font-semibold tracking-tight">
-              Slackmate
+              ThreadoAI
             </span>
           </div>
           <div className="hidden items-center gap-8 md:flex">
@@ -341,7 +341,7 @@ export default function Home() {
                 The Slack assistant for digest, follow-up, and action flow
               </h1>
               <p className="mt-4 text-base text-white/70 md:text-lg">
-                Slackmate automates digest delivery, tracks unanswered threads,
+                ThreadoAI automates digest delivery, tracks unanswered threads,
                 extracts action items, summarizes threads, translates messages
                 in place, and keeps a reusable decision log.
               </p>
@@ -401,7 +401,7 @@ export default function Home() {
                     Live assist preview
                   </span>
                   <span className="rounded-full border border-white/20 px-3 py-1 text-xs text-white/70">
-                    Slackmate AI
+                    ThreadoAI
                   </span>
                 </div>
                 <div className="mt-6 rounded-2xl border border-white/10 bg-slate-950/60 p-4">
@@ -755,7 +755,7 @@ export default function Home() {
                   Answers for security, billing, and Slack admins
                 </h2>
                 <p className="mt-4 text-sm text-white/70">
-                  Everything you need to know before installing Slackmate.
+                  Everything you need to know before installing ThreadoAI.
                 </p>
               </div>
               <div className="space-y-4">
@@ -782,7 +782,7 @@ export default function Home() {
                   Ready to automate digest and follow-up in Slack?
                 </h2>
                 <p className="mt-3 text-sm text-white/70">
-                  Install Slackmate, set your schedule and SLA, and start
+                  Install ThreadoAI, set your schedule and SLA, and start
                   shipping cleaner thread outcomes in minutes.
                 </p>
               </div>
@@ -810,7 +810,7 @@ export default function Home() {
               </a>
             ))}
           </div>
-          <p>© 2024 Slackmate. All rights reserved.</p>
+          <p>© 2024 ThreadoAI. All rights reserved.</p>
         </div>
       </footer>
 

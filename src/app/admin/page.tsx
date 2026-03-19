@@ -2007,7 +2007,7 @@ export default function AdminPage() {
           <div className={ui.headerInner}>
             <div className={ui.brandWrap}>
               <div className={ui.brandBadge}>S</div>
-              <span className={ui.brandText}>Slackmate</span>
+              <span className={ui.brandText}>ThreadoAI</span>
             </div>
             <Link
               href="/"
@@ -2046,7 +2046,7 @@ export default function AdminPage() {
         <div className={ui.headerInner}>
           <div className={ui.brandWrap}>
             <div className={ui.brandBadge}>S</div>
-            <span className={ui.brandText}>Slackmate</span>
+            <span className={ui.brandText}>ThreadoAI</span>
           </div>
           <Link href="/" className={ui.ghostLink}>
             Back to home
@@ -2111,7 +2111,7 @@ export default function AdminPage() {
           </div>
           <h1 className="text-3xl font-semibold text-white">Admin profile</h1>
           <p className="text-sm text-white/70">
-            Review your Slackmate admin details and update your default language
+            Review your ThreadoAI admin details and update your default language
             preferences.
           </p>
         </section>

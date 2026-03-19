@@ -1,6 +1,6 @@
-# Slackmate
+# ThreadoAI
 
-Slackmate is a stateless Slack assistant for translation, summaries, and reply drafting. It processes Slack payloads on-the-fly and does not store message content in a database.
+ThreadoAI is a stateless Slack assistant for translation, summaries, and reply drafting. It processes Slack payloads on-the-fly and does not store message content in a database.
 
 ## Shipped features
 - Translate Slack messages with AWS Amazon Translate.

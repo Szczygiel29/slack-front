@@ -253,7 +253,7 @@ function AuthPageContent() {
             <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-indigo-500/90 text-sm font-semibold shadow-lg shadow-indigo-500/40">
               S
             </div>
-            <span className="text-lg font-semibold tracking-tight">Slackmate</span>
+            <span className="text-lg font-semibold tracking-tight">ThreadoAI</span>
           </div>
           <Link
             href="/"
@@ -294,8 +294,8 @@ function AuthPageContent() {
           </div>
           <p className="mt-6 text-sm text-white/60">
             {mode === "login"
-              ? "Use your existing Slackmate credentials to continue."
-              : "Create an account to set up Slackmate for your team."}
+              ? "Use your existing ThreadoAI credentials to continue."
+              : "Create an account to set up ThreadoAI for your team."}
           </p>
         </section>
 

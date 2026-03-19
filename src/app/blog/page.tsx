@@ -14,7 +14,7 @@ export default function BlogPage() {
               S
             </div>
             <span className="text-lg font-semibold tracking-tight">
-              Slackmate
+              ThreadoAI
             </span>
           </div>
           <div className="flex items-center gap-4">
