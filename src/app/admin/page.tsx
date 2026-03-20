@@ -566,6 +566,7 @@ export default function AdminPage() {
   const slackClientId = process.env.NEXT_PUBLIC_SLACK_CLIENT_ID;
   const slackOauthConfigured = Boolean(slackClientId);
 
+  
   useEffect(() => {
     let isMounted = true;
     const load = async () => {
