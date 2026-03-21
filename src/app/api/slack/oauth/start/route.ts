@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { buildBackendUrl } from "../../../../../lib/backend";
 import { authCookieOptions, createNonce, getSession } from "../../../../../lib/session";
 import { SLACK_OAUTH_STATE_COOKIE } from "../../../../../lib/session-constants";
+
+type UserProfileResponse = {
+  email?: string | null;
+};
 
 const getFrontendOrigin = (request: NextRequest) => {
   if (process.env.NEXT_PUBLIC_APP_URL) {
@@ -26,7 +31,27 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(errorRedirect);
   }
 
-  const state = createNonce();
+  let state = createNonce();
+
+  try {
+    const profileResponse = await fetch(buildBackendUrl("/users/me"), {
+      method: "GET",
+      headers: {
+        Authorization: `${session.tokenType} ${session.accessToken}`,
+      },
+      cache: "no-store",
+    });
+
+    if (profileResponse.ok) {
+      const profile = (await profileResponse.json()) as UserProfileResponse;
+      if (profile.email) {
+        state = profile.email;
+      }
+    }
+  } catch {
+    // Fall back to a nonce if the profile lookup is temporarily unavailable.
+  }
+
   const redirectUri = new URL("/api/slack/oauth/callback", frontendOrigin).toString();
   const slackAuthorizeUrl = new URL("https://slack.com/oauth/v2/authorize");
 
