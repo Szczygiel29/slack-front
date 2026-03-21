@@ -52,7 +52,9 @@ export async function GET(request: NextRequest) {
     // Fall back to a nonce if the profile lookup is temporarily unavailable.
   }
 
-  const redirectUri = new URL("/api/slack/oauth/callback", frontendOrigin).toString();
+  const redirectUri =
+    process.env.NEXT_PUBLIC_SLACK_REDIRECT_URI ??
+    "https://slackmate-api-179213340024.europe-central2.run.app/api/v1/slack/oauth/redirect";
   const slackAuthorizeUrl = new URL("https://slack.com/oauth/v2/authorize");
 
   slackAuthorizeUrl.searchParams.set("client_id", slackClientId);
