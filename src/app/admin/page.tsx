@@ -559,6 +559,9 @@ export default function AdminPage() {
   const [businessSeatsNotice, setBusinessSeatsNotice] = useState("");
   const [businessSeatsError, setBusinessSeatsError] = useState("");
   const [isUpdatingWorkspaceLimit, setIsUpdatingWorkspaceLimit] = useState(false);
+  const [isRemovingWorkspaceByCode, setIsRemovingWorkspaceByCode] = useState<
+    Record<string, boolean>
+  >({});
   const [workspaceLimitNotice, setWorkspaceLimitNotice] = useState("");
   const [workspaceLimitError, setWorkspaceLimitError] = useState("");
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
@@ -1933,6 +1936,64 @@ export default function AdminPage() {
     setPendingDangerAction("remove-workspace");
   };
 
+  const handleDeleteWorkspaceByCode = async (workspaceCode: string) => {
+    setWorkspaceLimitNotice("");
+    setWorkspaceLimitError("");
+    setIsRemovingWorkspaceByCode((prev) => ({
+      ...prev,
+      [workspaceCode]: true,
+    }));
+
+    try {
+      const response = await apiFetch(
+        `/users/me/workspaces/${encodeURIComponent(workspaceCode)}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (response.status === 401 || response.status === 403) {
+        setWorkspaceLimitError(
+          "Your session could not be verified. Sign in again and retry."
+        );
+        return;
+      }
+
+      if (!response.ok) {
+        throw new Error("Unable to remove workspace.");
+      }
+
+      setUser((prev) => {
+        if (!prev) {
+          return prev;
+        }
+
+        const nextHandledWorkspaces = (prev.handledWorkspaces ?? []).filter(
+          (workspace) => workspace.code !== workspaceCode
+        );
+
+        return {
+          ...prev,
+          handledWorkspaces: nextHandledWorkspaces,
+          workspaceUsed: nextHandledWorkspaces.length,
+        };
+      });
+
+      setWorkspaceLimitNotice("Workspace removed.");
+    } catch (workspaceError) {
+      setWorkspaceLimitError(
+        workspaceError instanceof Error
+          ? workspaceError.message
+          : "Unable to remove workspace."
+      );
+    } finally {
+      setIsRemovingWorkspaceByCode((prev) => ({
+        ...prev,
+        [workspaceCode]: false,
+      }));
+    }
+  };
+
   const executeAddBusinessSeat = async () => {
     setBusinessSeatsNotice("");
     setBusinessSeatsError("");
@@ -2210,13 +2271,28 @@ export default function AdminPage() {
                                 </p>
                                 <p className="text-white">{workspace.name}</p>
                               </div>
-                              <a
-                                href={normalizeWorkspaceLink(workspace.link)}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center justify-center rounded-full bg-indigo-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300">
-                                Go to workspace
-                              </a>
+                              <div className="flex flex-col gap-2 sm:items-end">
+                                <a
+                                  href={normalizeWorkspaceLink(workspace.link)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center justify-center rounded-full bg-indigo-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300">
+                                  Go to workspace
+                                </a>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleDeleteWorkspaceByCode(workspace.code)
+                                  }
+                                  disabled={Boolean(
+                                    isRemovingWorkspaceByCode[workspace.code]
+                                  )}
+                                  className="inline-flex items-center justify-center rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white transition hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-60">
+                                  {isRemovingWorkspaceByCode[workspace.code]
+                                    ? "Removing..."
+                                    : "Remove workspace"}
+                                </button>
+                              </div>
                             </li>
                           ))}
                         </ul>
@@ -2225,6 +2301,16 @@ export default function AdminPage() {
                           No handled workspaces connected yet.
                         </div>
                       )}
+                      {workspaceLimitNotice ? (
+                        <p className="mt-3 text-xs text-emerald-200">
+                          {workspaceLimitNotice}
+                        </p>
+                      ) : null}
+                      {workspaceLimitError ? (
+                        <Notice tone="error" className="mt-3">
+                          {workspaceLimitError}
+                        </Notice>
+                      ) : null}
                     </div>
 
                     <div>
