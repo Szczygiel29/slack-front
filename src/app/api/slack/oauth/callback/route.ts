@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     return buildErrorRedirect("invalid_state");
   }
 
-  const backendCallbackUrl = new URL(buildBackendUrl("/slack/oauth/callback"));
+  const backendCallbackUrl = new URL(buildBackendUrl("/slack/oauth/redirect"));
   incomingUrl.searchParams.forEach((value, key) => {
     backendCallbackUrl.searchParams.append(key, value);
   });
