@@ -4,7 +4,6 @@ const normalizeBaseUrl = (value: string) => value.replace(/\/+$/, "");
 
 export const getBackendUrl = () => {
   const envUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-  console.log("test " + envUrl);
   return normalizeBaseUrl(envUrl ?? DEFAULT_BACKEND_URL);
 };
 
