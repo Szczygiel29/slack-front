@@ -101,6 +101,10 @@ type AccountDeletionVM = {
   deletedUser: boolean;
 };
 
+type SlackOauthConfigResponse = {
+  configured?: boolean;
+};
+
 type DangerAction =
   | "cancel-subscription"
   | "delete-account"
@@ -563,8 +567,9 @@ export default function AdminPage() {
   const [dangerError, setDangerError] = useState("");
   const [pendingDangerAction, setPendingDangerAction] =
     useState<DangerAction | null>(null);
-  const slackClientId = process.env.NEXT_PUBLIC_SLACK_CLIENT_ID;
-  const slackOauthConfigured = Boolean(slackClientId);
+  const [slackOauthConfigured, setSlackOauthConfigured] = useState<boolean | null>(
+    null
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -615,6 +620,40 @@ export default function AdminPage() {
     };
 
     void load();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadSlackOauthConfig = async () => {
+      try {
+        const response = await fetch("/api/slack/oauth/config", {
+          method: "GET",
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+
+        if (!response.ok) {
+          throw new Error("Unable to load Slack OAuth configuration.");
+        }
+
+        const data = (await response.json()) as SlackOauthConfigResponse;
+
+        if (isMounted) {
+          setSlackOauthConfigured(Boolean(data.configured));
+        }
+      } catch {
+        if (isMounted) {
+          setSlackOauthConfigured(false);
+        }
+      }
+    };
+
+    void loadSlackOauthConfig();
 
     return () => {
       isMounted = false;
@@ -2814,6 +2853,8 @@ export default function AdminPage() {
                         <span>
                           {!subscriptionActive
                             ? "Purchase and activate a subscription to connect Slack."
+                            : slackOauthConfigured === null
+                            ? "Checking Slack OAuth configuration..."
                             : slackOauthConfigured
                             ? "Workspace limit reached."
                             : "Slack OAuth is not configured (NEXT_PUBLIC_SLACK_CLIENT_ID)."}
