@@ -2264,19 +2264,21 @@ export default function AdminPage() {
                           {user.handledWorkspaces.map((workspace) => (
                             <li
                               key={workspace.code}
-                              className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-950/60 p-4 sm:flex-row sm:items-center sm:justify-between">
-                              <div>
+                              className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-slate-950/60 p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+                              <div className="min-w-0 flex-1">
                                 <p className="text-xs uppercase tracking-wide text-white/60">
                                   Workspace name
                                 </p>
-                                <p className="text-white">{workspace.name}</p>
+                                <p className="break-words text-white">
+                                  {workspace.name}
+                                </p>
                               </div>
-                              <div className="flex flex-col gap-2 sm:items-end">
+                              <div className="flex w-full flex-col gap-2 sm:w-56 sm:flex-none">
                                 <a
                                   href={normalizeWorkspaceLink(workspace.link)}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="inline-flex items-center justify-center rounded-full bg-indigo-500 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300">
+                                  className="inline-flex min-h-10 w-full items-center justify-center rounded-full bg-indigo-500 px-4 py-2 text-center text-xs font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-300">
                                   Go to workspace
                                 </a>
                                 <button
@@ -2287,7 +2289,7 @@ export default function AdminPage() {
                                   disabled={Boolean(
                                     isRemovingWorkspaceByCode[workspace.code]
                                   )}
-                                  className="inline-flex items-center justify-center rounded-full border border-white/20 px-4 py-2 text-xs font-semibold text-white transition hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-60">
+                                  className="inline-flex min-h-10 w-full items-center justify-center rounded-full border border-white/20 px-4 py-2 text-center text-xs font-semibold text-white transition hover:border-white/40 disabled:cursor-not-allowed disabled:opacity-60">
                                   {isRemovingWorkspaceByCode[workspace.code]
                                     ? "Removing..."
                                     : "Remove workspace"}
